@@ -57,6 +57,7 @@ audit log (a projector may derive an index/read model for reporting).
 | `31101` | trust/policy declaration | subject | JSON (only if not expressible as NIP-51) |
 | `31102` | identity definition | subject pubkey (64-hex) | `{"username": "<account>", "signer_type": "nip07|nip46|passkey|unknown", "label": "...", "enabled": true}` |
 | `31300` | build/CI attestation | `"<repo>:<commit>"` | JSON (replaces bespoke catalogue kind 30080) |
+| `30617` | NIP-34 repository announcement (state layer) | `"nostrhost-state"` | description; tags `i` = repo id, `n` = network, `r` = relative path |
 
 `31102` is the authoritative pubkey ↔ YunoHost-account mapping. Authored by an
 administrator (Phase 3 provisioning) or by the subject with proven account
