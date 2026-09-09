@@ -1,0 +1,41 @@
+# nostrhost-control — control-plane relay configuration.
+#
+# The relay binds loopback only: this is the local control plane, not a
+# public relay. Set operator_pubkey to your admin identity (hex pubkey).
+
+listen_host = "127.0.0.1"
+listen_port = 4848
+
+name        = "nostrhost"
+description = "NostrHost local control plane"
+# icon = "https://example.com/icon.png"
+
+# Required: the primary administrator (hex pubkey).
+operator_pubkey = ""
+
+# Additional administrators (hex pubkeys).
+# admin_pubkeys = ["...", "..."]
+
+# In allowlist mode only explicitly allowed pubkeys may publish.
+allowlist_mode = false
+
+# Kinds that require NIP-42 AUTH to write (and read). When empty, the
+# control-plane default set is used (operation chain, capability/trust,
+# system events, NIP-78 app data, NIP-51 lists).
+require_auth_kinds = []
+
+# Optional kind allowlist: when non-empty, only these kinds are stored
+# (anything else is rejected unless later allowed via NIP-86 allowkind).
+allowed_kinds = []
+denied_kinds  = []
+
+max_content_length = 100000
+
+events_db_path = "./data/events.db"
+policy_db_path = "./data/policy.db"
+
+# Kinds that are stored but aged out after keep_for (operation requests, for
+# example, are kept for audit but pruned after a retention window).
+[[prunable]]
+kind     = 2200
+keep_for = "720h"
