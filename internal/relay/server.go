@@ -71,6 +71,12 @@ pol, err := policy.Open(cfg.PolicyDBPath, adminsFrom(cfg), cfg.AllowedKinds, cfg
 	if nostr.IsValidPublicKey(cfg.ServerPubkey) {
 		_ = pol.Allow(cfg.ServerPubkey, "server")
 	}
+	// The portal's dedicated notice key writes auth/login notices (2206). Like
+	// the server key it is an allowlisted writer only, never an admin - the
+	// portal service must not hold operator/root keys.
+	if nostr.IsValidPublicKey(cfg.NoticePubkey) {
+		_ = pol.Allow(cfg.NoticePubkey, "portal")
+	}
 
 	s := &Server{
 		Relay:  khatru.NewRelay(),

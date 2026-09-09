@@ -69,6 +69,7 @@ projection store and the LDAP compatibility account.
 
 | kind | name | content |
 |---|---|---|
+| `2206` | auth/login notice | `{"username": ..., "at": ...}`; `["p", subject pubkey]` (roadmap §8) |
 | `2210` | system event | JSON |
 | `2211` | service event | JSON |
 | `2212` | backup event | JSON |

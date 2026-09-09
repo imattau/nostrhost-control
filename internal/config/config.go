@@ -31,6 +31,7 @@ type Config struct {
 	Icon             string     `toml:"icon"`
 	OperatorPubkey   string     `toml:"operator_pubkey"`
 	ServerPubkey     string     `toml:"server_pubkey"`
+	NoticePubkey     string     `toml:"notice_pubkey"`
 	AdminPubkeys     []string   `toml:"admin_pubkeys"`
 	AllowlistMode    bool       `toml:"allowlist_mode"`
 	RequireAuthKinds []int      `toml:"require_auth_kinds"`
