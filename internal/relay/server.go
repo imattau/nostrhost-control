@@ -146,8 +146,14 @@ func adminsFrom(cfg config.Config) []string {
 }
 
 // protectedKinds returns the kinds that require NIP-42 auth.
+//
+// Config semantics: `require_auth_kinds` unset (nil) → the default protected
+// set is used; explicitly set to an empty list → NIP-42 is not required at
+// all (the loopback control-plane posture: write allowlist + loopback
+// binding carry the access control, since nostr-sdk clients can't yet do
+// NIP-42 client auth cleanly). Non-empty list → exactly those kinds.
 func (s *Server) protectedKinds() []int {
-	if len(s.Cfg.RequireAuthKinds) > 0 {
+	if s.Cfg.RequireAuthKinds != nil {
 		return s.Cfg.RequireAuthKinds
 	}
 	return ProtectedKinds

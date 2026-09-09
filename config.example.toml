@@ -19,9 +19,13 @@ operator_pubkey = ""
 # In allowlist mode only explicitly allowed pubkeys may publish.
 allowlist_mode = false
 
-# Kinds that require NIP-42 AUTH to write (and read). When empty, the
-# control-plane default set is used (operation chain, capability/trust,
-# system events, NIP-78 app data, NIP-51 lists).
+# Kinds that require NIP-42 AUTH to write (and read).
+#   absent  -> the control-plane default set is used (control kinds, NIP-78
+#              app data, NIP-51 lists)
+#   []      -> NIP-42 not required (Phase-3 loopback posture: write allowlist
+#              + loopback binding carry access control; nostr-sdk Python
+#              clients can't yet do NIP-42 client auth cleanly)
+#   [k,...] -> exactly these kinds
 require_auth_kinds = []
 
 # Optional kind allowlist: when non-empty, only these kinds are stored

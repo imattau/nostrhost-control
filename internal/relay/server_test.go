@@ -304,3 +304,33 @@ func nip86Call(t *testing.T, adminSk, addr, method string, params any) error {
 	}
 	return nil
 }
+
+func TestProtectedKindsSemantics(t *testing.T) {
+	cfg := config.Default()
+	cfg.OperatorPubkey = mustPubkey(t)
+	cfg.EventsDBPath = filepath.Join(t.TempDir(), "events.db")
+	cfg.PolicyDBPath = filepath.Join(t.TempDir(), "policy.db")
+	cfg.RequireAuthKinds = nil
+	srv, err := New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := srv.protectedKinds(); len(got) == 0 {
+		t.Fatal("nil require_auth_kinds should use the default protected set")
+	}
+	_ = srv.Policy.Close() // release the bolt lock before reopening the path
+
+	cfg.RequireAuthKinds = []int{}
+	srv2, err := New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := srv2.protectedKinds(); len(got) != 0 {
+		t.Fatalf("empty require_auth_kinds should disable NIP-42, got %v", got)
+	}
+}
+
+func mustPubkey(t *testing.T) string {
+	t.Helper()
+	return "84dee6e676e5bb67b4ad4e042cf70cbd8681155db535942fcc6a0533858a7240"
+}
