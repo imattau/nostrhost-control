@@ -13,6 +13,10 @@ description = "NostrHost local control plane"
 # Required: the primary administrator (hex pubkey).
 operator_pubkey = ""
 
+# The server's own machine key (hex pubkey): an allowlisted WRITER for
+# execution events (2203/2204), NOT an admin. Optional.
+# server_pubkey = ""
+
 # Additional administrators (hex pubkeys).
 # admin_pubkeys = ["...", "..."]
 

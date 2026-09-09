@@ -116,3 +116,29 @@ All calls require a valid NIP-98 signature by a configured administrator.
   evaluated by the policy engine).
 - Sessions, CSRF and challenge state stay in the local HTTP/auth subsystem —
   never in the event stream.
+## 7. Identity bootstrap
+
+Three distinct roles (hardened bootstrap, Phase 3):
+
+| role | key | signs |
+|---|---|---|
+| server | `server_sk` | execution `2203`/`2204` (the node's machine identity) |
+| operator | `operator_sk` | approval `2201`/`2202`, capability `31100`, identity `31102` |
+| admins | admin pubkeys | — (the set the projector/executor accept events from; always includes the operator) |
+
+**Bootstrap vs post-bootstrap authority:**
+
+- *Bootstrap* is the local, root-only, high-trust action (`nostrhost-bootstrap`):
+  the machine owner generates/imports `server_sk` + `operator_sk` and
+  designates admins into `/etc/nostrhost/operator.toml` (0600). Until then
+  the daemons refuse to operate and the mutating CLI tools fail with a clear
+  pointer to the bootstrap action.
+- *Post-bootstrap*, authority flows through the configured admins via the
+  signed event stream (approvals, grants, identity definitions); the relay
+  allowlists both the operator (admin) and the server (writer only, via
+  `server_pubkey`) so execution events are accepted without granting the
+  server NIP-86 authority.
+
+Legacy single-key configs (no `server_sk`) keep working: the server key falls
+back to the operator key, and `nostrhost-bootstrap --force` upgrades them to
+the distinct-key model.

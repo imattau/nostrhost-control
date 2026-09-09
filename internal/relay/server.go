@@ -62,9 +62,14 @@ type Server struct {
 
 // New assembles the relay from cfg.
 func New(cfg config.Config) (*Server, error) {
-	pol, err := policy.Open(cfg.PolicyDBPath, adminsFrom(cfg), cfg.AllowedKinds, cfg.AllowlistMode)
+pol, err := policy.Open(cfg.PolicyDBPath, adminsFrom(cfg), cfg.AllowedKinds, cfg.AllowlistMode)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open policy store: %w", err)
+	}
+	// The server's own machine key writes execution events (2203/2204). It is
+	// an allowlisted writer but NOT an admin (no NIP-86 authority).
+	if nostr.IsValidPublicKey(cfg.ServerPubkey) {
+		_ = pol.Allow(cfg.ServerPubkey, "server")
 	}
 
 	s := &Server{

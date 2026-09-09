@@ -334,3 +334,19 @@ func mustPubkey(t *testing.T) string {
 	t.Helper()
 	return "84dee6e676e5bb67b4ad4e042cf70cbd8681155db535942fcc6a0533858a7240"
 }
+
+func TestServerPubkeyIsAllowlistedWriterNotAdmin(t *testing.T) {
+	operator := mustPubkey(t)
+	server := "76e4be1f39b21251c9aa0a5d5ff272f3c6888739646461e37f78ebceeca9b02c"
+	srv, _ := startServer(t, operator, func(cfg *config.Config) { cfg.ServerPubkey = server })
+
+	if !srv.Policy.IsAllowed(server) {
+		t.Fatal("server pubkey should be an allowlisted writer")
+	}
+	if srv.Policy.IsAdmin(server) {
+		t.Fatal("server pubkey must NOT be a relay admin (NIP-86 authority)")
+	}
+	if !srv.Policy.IsAdmin(operator) {
+		t.Fatal("operator pubkey should be a relay admin")
+	}
+}
