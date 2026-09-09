@@ -204,7 +204,7 @@ func validateIdentityDefinition(event *nostr.Event) error {
 	if err := json.Unmarshal([]byte(event.Content), &body); err != nil {
 		return kindError(event.Kind, "identity definition content must be JSON: "+err.Error())
 	}
-	if strings.TrimSpace(body.Username) == "" {
+	if strings.TrimSpace(body.Username) == "" && (body.Enabled == nil || *body.Enabled) {
 		return kindError(event.Kind, "identity definition content must declare a non-empty 'username'")
 	}
 	switch body.SignerType {

@@ -99,6 +99,12 @@ func TestIdentityDefinitionValidation(t *testing.T) {
 	if err := Validate(revoked); err != nil {
 		t.Fatalf("revocation form rejected: %v", err)
 	}
+
+	// revocation without a username (fork's revoke_identity form) is valid
+	revokedNoUser := mk(KindIdentityDefinition, `{"username":"","enabled":false}`, nostr.Tag{"d", pk})
+	if err := Validate(revokedNoUser); err != nil {
+		t.Fatalf("revocation without username rejected: %v", err)
+	}
 }
 
 func TestRetentionClasses(t *testing.T) {
