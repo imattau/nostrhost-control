@@ -68,6 +68,39 @@ func TestOperationChainValidation(t *testing.T) {
 	}
 }
 
+func TestIdentityDefinitionValidation(t *testing.T) {
+	pk := "84dee6e676e5bb67b4ad4e042cf70cbd8681155db535942fcc6a0533858a7240"
+	valid := mk(KindIdentityDefinition, `{"username":"matt","signer_type":"nip46","label":"phone","enabled":true}`,
+		nostr.Tag{"d", pk})
+	if err := Validate(valid); err != nil {
+		t.Fatalf("valid identity definition rejected: %v", err)
+	}
+
+	// missing username
+	noUser := mk(KindIdentityDefinition, `{"signer_type":"nip46"}`, nostr.Tag{"d", pk})
+	if err := Validate(noUser); err == nil {
+		t.Fatal("identity without username should be rejected")
+	}
+
+	// bad signer_type
+	badSigner := mk(KindIdentityDefinition, `{"username":"matt","signer_type":"fido"}`, nostr.Tag{"d", pk})
+	if err := Validate(badSigner); err == nil {
+		t.Fatal("identity with bad signer_type should be rejected")
+	}
+
+	// bad d tag
+	badD := mk(KindIdentityDefinition, `{"username":"matt"}`, nostr.Tag{"d", "nope"})
+	if err := Validate(badD); err == nil {
+		t.Fatal("identity with invalid d should be rejected")
+	}
+
+	// revocation (enabled:false) is valid
+	revoked := mk(KindIdentityDefinition, `{"username":"matt","enabled":false}`, nostr.Tag{"d", pk})
+	if err := Validate(revoked); err != nil {
+		t.Fatalf("revocation form rejected: %v", err)
+	}
+}
+
 func TestRetentionClasses(t *testing.T) {
 	cases := map[int]string{
 		KindOperationRequest: ClassImmutable,

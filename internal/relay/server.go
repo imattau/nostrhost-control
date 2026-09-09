@@ -44,7 +44,8 @@ var ProtectedKinds = []int{
 	eventmodel.KindExecutionResult, eventmodel.KindSystemEvent,
 	eventmodel.KindServiceEvent, eventmodel.KindBackupEvent,
 	eventmodel.KindSecurityEvent, eventmodel.KindCapability,
-	eventmodel.KindTrustPolicy, eventmodel.KindBuildAttestation,
+	eventmodel.KindTrustPolicy, eventmodel.KindIdentityDefinition,
+	eventmodel.KindBuildAttestation,
 	78, 30078, 10002, 30000, 30002, 30267, 10006,
 }
 

@@ -55,7 +55,14 @@ audit log (a projector may derive an index/read model for reporting).
 |---|---|---|---|
 | `31100` | capability/role grant | subject pubkey (64-hex) | `{"type": "<role>", "scopes": ["app.install", ...]}` |
 | `31101` | trust/policy declaration | subject | JSON (only if not expressible as NIP-51) |
+| `31102` | identity definition | subject pubkey (64-hex) | `{"username": "<account>", "signer_type": "nip07|nip46|passkey|unknown", "label": "...", "enabled": true}` |
 | `31300` | build/CI attestation | `"<repo>:<commit>"` | JSON (replaces bespoke catalogue kind 30080) |
+
+`31102` is the authoritative pubkey ↔ YunoHost-account mapping. Authored by an
+administrator (Phase 3 provisioning) or by the subject with proven account
+control (Phase 4 portal self-link). Revocation = re-publish with
+`enabled: false`. The identity projector materialises these into the
+projection store and the LDAP compatibility account.
 
 ### 2.3 System notices (regular)
 

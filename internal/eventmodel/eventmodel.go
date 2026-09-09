@@ -55,6 +55,12 @@ const (
 	// KindTrustPolicy: a server-authoritative trust/policy declaration that
 	// is not expressible as a NIP-51 list. d = subject.
 	KindTrustPolicy int = 31101
+	// KindIdentityDefinition: the server-authoritative pubkey ↔ YunoHost
+	// account mapping. d = subject pubkey (hex). Content:
+	// {"username": "...", "signer_type": "...", "label": "...",
+	//  "enabled": true}. Authored by an administrator (Phase 3) or by the
+	// subject with proven account control (Phase 4 portal self-link).
+	KindIdentityDefinition int = 31102
 	// KindBuildAttestation: CI/build attestation for a package revision.
 	// d = "repo:commit". Replaces the bespoke catalogue kind 30080.
 	KindBuildAttestation int = 31300
@@ -91,7 +97,7 @@ func IsCustomKind(kind int) bool {
 	case KindOperationRequest, KindOperationApproval, KindOperationRejection,
 		KindExecutionStarted, KindExecutionResult, KindSystemEvent,
 		KindServiceEvent, KindBackupEvent, KindSecurityEvent,
-		KindCapability, KindTrustPolicy, KindBuildAttestation:
+		KindCapability, KindTrustPolicy, KindIdentityDefinition, KindBuildAttestation:
 		return true
 	}
 	return false
@@ -125,6 +131,8 @@ func Validate(event *nostr.Event) error {
 	switch kind {
 	case KindCapability:
 		return validateCapability(event)
+	case KindIdentityDefinition:
+		return validateIdentityDefinition(event)
 	case KindTrustPolicy:
 		return validateAddressable(event, "trust policy")
 	case KindBuildAttestation:
@@ -178,6 +186,31 @@ func validateCapability(event *nostr.Event) error {
 	}
 	if body.Type == "" {
 		return kindError(event.Kind, "capability content must declare a 'type'")
+	}
+	return nil
+}
+
+func validateIdentityDefinition(event *nostr.Event) error {
+	d := event.Tags.Find("d")
+	if d == nil || len(d) < 2 || !validHex64(d[1]) {
+		return kindError(event.Kind, "identity definition 'd' tag must be the subject pubkey (64-hex)")
+	}
+	var body struct {
+		Username   string `json:"username"`
+		SignerType string `json:"signer_type"`
+		Label      string `json:"label"`
+		Enabled    *bool  `json:"enabled"`
+	}
+	if err := json.Unmarshal([]byte(event.Content), &body); err != nil {
+		return kindError(event.Kind, "identity definition content must be JSON: "+err.Error())
+	}
+	if strings.TrimSpace(body.Username) == "" {
+		return kindError(event.Kind, "identity definition content must declare a non-empty 'username'")
+	}
+	switch body.SignerType {
+	case "", "nip07", "nip46", "passkey", "unknown":
+	default:
+		return kindError(event.Kind, "identity definition signer_type must be one of nip07|nip46|passkey|unknown")
 	}
 	return nil
 }
