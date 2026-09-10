@@ -32,7 +32,7 @@ NIP mapping (`docs/NIP-MAPPING.md` in the umbrella repo).
 | kind | name | required shape |
 |---|---|---|
 | `2200` | operation request | content `{"tool": "<string>", "args": {...}}`; optional `["p", target]` |
-| `2201` | approval | `["e", <request id>]`; content optional JSON |
+| `2201` | approval | `["e", <request id>]`; content optional JSON; NIP-46 approvals also include `["t", "nip46"]` |
 | `2202` | rejection | `["e", <request id>]`; content optional JSON |
 | `2203` | execution started | `["e", <request id>]`; content JSON |
 | `2204` | execution result | `["e", <request id>]`; content `{"ok": bool, ...}` |
@@ -41,7 +41,7 @@ Chain flow — every step references the request by its event id:
 
 ```text
 REQUEST    npub-agent   kind 2200   app.upgrade  ditto
-APPROVAL   npub-admin   kind 2201   e -> request-id
+APPROVAL   npub-admin   kind 2201   e -> request-id (optional t=nip46)
 EXECUTION  npub-server  kind 2203   e -> request-id
 RESULT     npub-server  kind 2204   e -> request-id   {"ok":true}
 ```
