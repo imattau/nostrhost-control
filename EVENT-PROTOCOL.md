@@ -57,6 +57,12 @@ audit log (a projector may derive an index/read model for reporting).
 | `31101` | trust/policy declaration | subject | JSON (only if not expressible as NIP-51) |
 | `31102` | identity definition | subject pubkey (64-hex) | `{"username": "<account>", "signer_type": "nip07|nip46|passkey|unknown", "label": "...", "enabled": true}` |
 | `31300` | build/CI attestation | `"<repo>:<commit>"` | JSON (replaces bespoke catalogue kind 30080) |
+
+Delegations use regular retained kind `27236` with tags `p` (delegate pubkey), `server`
+(target server pubkey), `expiry` (Unix timestamp), and one or more `scope`
+tags. A delegator may only delegate scopes it currently holds. Kind `27237`
+revokes a delegation via an `e` tag and may be authored by the delegator or an
+administrator.
 | `30617` | NIP-34 repository announcement (state layer) | `"nostrhost-state"` | description; tags `i` = repo id, `n` = network, `r` = relative path |
 
 `31102` is the authoritative pubkey ↔ YunoHost-account mapping. Authored by an

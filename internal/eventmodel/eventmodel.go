@@ -36,6 +36,10 @@ const (
 	// KindExecutionResult: the executor reports the outcome for request id.
 	// Content: {"ok": bool, ...}. Carries ["e", <request event id>].
 	KindExecutionResult int = 2204
+	// KindDelegation: a server-scoped, expiring capability delegation.
+	KindDelegation int = 27236
+	// KindDelegationRevocation: revokes a delegation by event id.
+	KindDelegationRevocation int = 27237
 
 	// KindSystemEvent / KindServiceEvent / KindBackupEvent / KindSecurityEvent:
 	// machine-state notices (system level, service state, backup outcome,
@@ -81,6 +85,10 @@ const (
 // Class returns the retention class for a kind.
 func Class(kind int) string {
 	switch {
+	case kind == KindDelegation || kind == KindDelegationRevocation:
+		// These are regular signed audit events despite using the 27236/27237
+		// range next to NIP-98. They must survive relay replay/reconnect.
+		return ClassImmutable
 	case kind >= 20000 && kind <= 29999:
 		return ClassEphemeral
 	case kind >= 10000 && kind <= 19999, kind >= 30000 && kind <= 39999:
@@ -97,6 +105,7 @@ func IsCustomKind(kind int) bool {
 	case KindOperationRequest, KindOperationApproval, KindOperationRejection,
 		KindExecutionStarted, KindExecutionResult, KindSystemEvent,
 		KindServiceEvent, KindBackupEvent, KindSecurityEvent,
+		KindDelegation, KindDelegationRevocation,
 		KindCapability, KindTrustPolicy, KindIdentityDefinition, KindBuildAttestation:
 		return true
 	}
@@ -141,8 +150,35 @@ func Validate(event *nostr.Event) error {
 		return validateOperationRequest(event)
 	case KindOperationApproval, KindOperationRejection, KindExecutionStarted, KindExecutionResult:
 		return validateChainStep(event)
+	case KindDelegation:
+		return validateDelegation(event)
+	case KindDelegationRevocation:
+		return validateDelegationRevocation(event)
 	case KindSystemEvent, KindServiceEvent, KindBackupEvent, KindSecurityEvent:
 		return validateJSONContent(event, "event payload")
+	}
+	return nil
+}
+
+func validateDelegation(event *nostr.Event) error {
+	p := event.Tags.Find("p")
+	server := event.Tags.Find("server")
+	if p == nil || len(p) < 2 || server == nil || len(server) < 2 || event.Tags.Find("expiry") == nil {
+		return kindError(event.Kind, "delegation requires p, server, and expiry tags")
+	}
+	if !validHex64(p[1]) || !validHex64(server[1]) {
+		return kindError(event.Kind, "delegation p and server tags must be 64-hex pubkeys")
+	}
+	if event.Tags.Find("scope") == nil {
+		return kindError(event.Kind, "delegation requires at least one scope tag")
+	}
+	return nil
+}
+
+func validateDelegationRevocation(event *nostr.Event) error {
+	e := event.Tags.Find("e")
+	if e == nil || len(e) < 2 || !validHex64(e[1]) {
+		return kindError(event.Kind, "delegation revocation requires a 64-hex e tag")
 	}
 	return nil
 }

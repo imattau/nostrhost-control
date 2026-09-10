@@ -1,6 +1,7 @@
 package eventmodel
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/nbd-wtf/go-nostr"
@@ -37,6 +38,26 @@ func TestCapabilityValidation(t *testing.T) {
 	noD := mk(KindCapability, `{"type":"admin"}`)
 	if err := Validate(noD); err == nil {
 		t.Fatal("capability without d should be rejected")
+	}
+}
+
+func TestDelegationValidation(t *testing.T) {
+	valid := mk(KindDelegation, "", nostr.Tag{"p", strings.Repeat("a", 64)}, nostr.Tag{"server", strings.Repeat("b", 64)}, nostr.Tag{"expiry", "9999999999"}, nostr.Tag{"scope", "apps.read"})
+	if err := Validate(valid); err != nil {
+		t.Fatalf("valid delegation rejected: %v", err)
+	}
+	invalid := mk(KindDelegationRevocation, "", nostr.Tag{"e", "not-an-id"})
+	if err := Validate(invalid); err == nil {
+		t.Fatal("delegation revocation with invalid e tag accepted")
+	}
+}
+
+func TestDelegationsAreRetainedForReplay(t *testing.T) {
+	if got := Class(KindDelegation); got != ClassImmutable {
+		t.Fatalf("delegation retention class = %q, want %q", got, ClassImmutable)
+	}
+	if got := Class(KindDelegationRevocation); got != ClassImmutable {
+		t.Fatalf("delegation revocation retention class = %q, want %q", got, ClassImmutable)
 	}
 }
 
