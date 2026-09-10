@@ -128,6 +128,51 @@ func TestIdentityDefinitionValidation(t *testing.T) {
 	}
 }
 
+func TestNoticeValidation(t *testing.T) {
+	empty := mk(KindSystemEvent, "")
+	if err := Validate(empty); err != nil {
+		t.Fatalf("empty notice content should be valid: %v", err)
+	}
+
+	valid := mk(KindBackupEvent, `{"class":"backup","severity":"warning","summary":"backup skipped, disk low"}`)
+	if err := Validate(valid); err != nil {
+		t.Fatalf("valid notice rejected: %v", err)
+	}
+
+	badSeverity := mk(KindSecurityEvent, `{"severity":"urgent"}`)
+	if err := Validate(badSeverity); err == nil {
+		t.Fatal("notice with unknown severity should be rejected")
+	}
+
+	noConvention := mk(KindServiceEvent, `{"anything":"goes"}`)
+	if err := Validate(noConvention); err != nil {
+		t.Fatalf("notice without the class/severity convention should still be valid JSON: %v", err)
+	}
+
+	badJSON := mk(KindSystemEvent, `not json`)
+	if err := Validate(badJSON); err == nil {
+		t.Fatal("notice with invalid JSON should be rejected")
+	}
+}
+
+func TestNoticeAccessor(t *testing.T) {
+	e := mk(KindBackupEvent, `{"class":"backup","severity":"critical","summary":"restic snapshot failed"}`)
+	class, severity, summary, ok := Notice(e)
+	if !ok || class != "backup" || severity != SeverityCritical || summary != "restic snapshot failed" {
+		t.Fatalf("Notice() = (%q, %q, %q, %v), want (backup, critical, restic snapshot failed, true)", class, severity, summary, ok)
+	}
+
+	empty := mk(KindSystemEvent, "")
+	if _, _, _, ok := Notice(empty); ok {
+		t.Fatal("Notice() on empty content should report ok=false")
+	}
+
+	notObject := mk(KindSystemEvent, `[1,2,3]`)
+	if _, _, _, ok := Notice(notObject); ok {
+		t.Fatal("Notice() on a non-object JSON body should report ok=false")
+	}
+}
+
 func TestRetentionClasses(t *testing.T) {
 	cases := map[int]string{
 		KindOperationRequest: ClassImmutable,

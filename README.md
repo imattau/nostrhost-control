@@ -30,14 +30,41 @@ The relay listens on `ws://127.0.0.1:4848` by default.
 ## Layout
 
 ```
-cmd/nostrhost-control/   entry point
+cmd/nostrhost-control/   entry point (the relay)
+cmd/nostrhost-notify/    entry point (the notification service)
 internal/relay/          khatru relay assembly + policies
 internal/eventmodel/     NostrHost custom kinds + schema validation
 internal/policy/         durable access/kind/admin policy store (bolt)
-internal/config/         TOML configuration
+internal/config/         TOML configuration (relay)
+internal/notify/         native notification service (roadmap §18.1)
 EVENT-PROTOCOL.md        canonical event-model spec
-config.example.toml
+config.example.toml      relay config
+notify.example.toml      notification service config
 ```
+
+## Notification service (`nostrhost-notify`)
+
+A second, separate binary — a relay *client*, not part of the relay process.
+It subscribes to the operation chain and system/service/backup/security
+notices (`EVENT-PROTOCOL.md` §2.3) on the local relay and delivers
+human-readable summaries to configured npubs as encrypted Nostr direct
+messages (NIP-17/NIP-59), replacing local mail as NostrHost's notification
+mechanism (roadmap §18.1; see `docs/NOTIFICATION-SERVICE.md` in the umbrella
+repo for the full design).
+
+```
+go build ./cmd/nostrhost-notify
+cp notify.example.toml notify.toml   # set notifier_private_key, outbound_relays
+./nostrhost-notify -config notify.toml
+```
+
+It holds its own "notifier" key, deliberately separate from the relay's
+`server_pubkey`/`operator_pubkey` — a compromised notifier key can read
+notices and send DMs, but carries no control-plane authority. Recipients and
+policy (which npubs, which event classes, severity threshold, immediate vs.
+digest delivery) live in `state/notifications/{recipients,policy}.toml`
+(roadmap §18.6); wiring that state directory to `nostrhost-state` is a
+follow-up (currently loaded as plain local TOML files).
 
 ## NIP-86 example
 

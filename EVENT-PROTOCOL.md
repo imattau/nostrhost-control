@@ -81,6 +81,31 @@ projection store and the LDAP compatibility account.
 | `2212` | backup event | JSON |
 | `2213` | security event | JSON |
 
+#### Notice content convention (optional, `eventmodel.Notice`)
+
+`2210`-`2213` accept arbitrary JSON, but the notification service (umbrella
+`docs/NOTIFICATION-SERVICE.md`, roadmap §18.1) reads three optional fields
+by convention, so producers should populate them where possible:
+
+```json
+{"class": "certificate", "severity": "warning", "summary": "cert for example.org expires in 5 days"}
+```
+
+- `class` — free-form subsystem label (e.g. `certificate`, `update`,
+  `recovery`, `cron`, `health`; `backup`/`security` are usually redundant
+  with the kind itself but may still be set for consistency). Not enforced.
+- `severity` — one of `info` | `warning` | `critical`
+  (`eventmodel.Severity*`). Enforced when present: an unknown value is
+  rejected at write time.
+- `summary` — a short human-readable line; this is what ends up in the
+  encrypted Nostr notification, not the raw content.
+
+There is no dedicated kind per notification class (`update available`,
+`recovery result`, `certificate event`, `system/cron notice` from roadmap
+§18.1/§18.7) — they are all `2210` (system) or `2211` (service) events
+distinguished by `class`, per the "primitive-first, minimal custom kind
+surface" principle (`docs/NIP-MAPPING.md`).
+
 ## 3. Retention classes
 
 | class | kinds | behaviour |

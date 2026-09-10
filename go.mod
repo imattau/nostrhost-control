@@ -16,6 +16,7 @@ require (
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.6 // indirect
+	github.com/btcsuite/btcd/btcutil v1.1.5 // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.14.2 // indirect
@@ -53,8 +54,10 @@ require (
 	go.opentelemetry.io/otel/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	golang.org/x/arch v0.22.0 // indirect
+	golang.org/x/crypto v0.49.0 // indirect
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546 // indirect
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )

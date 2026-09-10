@@ -50,6 +50,16 @@ const (
 	KindSecurityEvent int = 2213
 )
 
+// Notice severities. System/service/backup/security events (2210-2213) that
+// carry a "severity" field in their JSON content must use one of these — the
+// notification service (roadmap §18.1) uses severity to apply per-recipient
+// thresholds.
+const (
+	SeverityInfo     = "info"
+	SeverityWarning  = "warning"
+	SeverityCritical = "critical"
+)
+
 // Addressable kinds (NIP-33: 30000–39999, d-tag keyed, replaceable per
 // subject) — server-authoritative definitions.
 const (
@@ -155,7 +165,41 @@ func Validate(event *nostr.Event) error {
 	case KindDelegationRevocation:
 		return validateDelegationRevocation(event)
 	case KindSystemEvent, KindServiceEvent, KindBackupEvent, KindSecurityEvent:
-		return validateJSONContent(event, "event payload")
+		return validateNotice(event)
+	}
+	return nil
+}
+
+// noticeBody is the optional convention carried by system/service/backup/
+// security notices: a free-form "class" (e.g. "certificate", "update",
+// "recovery", "cron", "health"), a "severity" (see the Severity* constants)
+// and a human-readable "summary". All three are optional — a notice with no
+// body at all is still valid JSON (or empty content) — but if "severity" is
+// present it must be one of the known levels, since the notification service
+// filters on it.
+type noticeBody struct {
+	Class    string `json:"class"`
+	Severity string `json:"severity"`
+	Summary  string `json:"summary"`
+}
+
+func validateNotice(event *nostr.Event) error {
+	if err := validateJSONContent(event, "notice payload"); err != nil {
+		return err
+	}
+	if event.Content == "" {
+		return nil
+	}
+	var body noticeBody
+	if err := json.Unmarshal([]byte(event.Content), &body); err != nil {
+		// Not an object shaped like noticeBody (e.g. a JSON array/scalar) —
+		// still valid JSON, so leave it be; the convention is optional.
+		return nil
+	}
+	switch body.Severity {
+	case "", SeverityInfo, SeverityWarning, SeverityCritical:
+	default:
+		return kindError(event.Kind, "notice severity must be one of info|warning|critical")
 	}
 	return nil
 }
@@ -270,6 +314,21 @@ func validateChainStep(event *nostr.Event) error {
 		return kindError(event.Kind, "operation chain events must reference the request via an 'e' tag")
 	}
 	return validateJSONContent(event, "chain step")
+}
+
+// Notice extracts the class/severity/summary convention (see noticeBody)
+// from a system/service/backup/security event. ok is false when the content
+// is empty or not shaped like a notice body (callers should fall back to
+// kind-derived defaults in that case).
+func Notice(event *nostr.Event) (class, severity, summary string, ok bool) {
+	if event.Content == "" {
+		return "", "", "", false
+	}
+	var body noticeBody
+	if err := json.Unmarshal([]byte(event.Content), &body); err != nil {
+		return "", "", "", false
+	}
+	return body.Class, body.Severity, body.Summary, true
 }
 
 func validateJSONContent(event *nostr.Event, what string) error {

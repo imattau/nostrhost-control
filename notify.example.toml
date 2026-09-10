@@ -1,0 +1,27 @@
+# nostrhost-notify — native notification service configuration.
+#
+# See docs/NOTIFICATION-SERVICE.md in the umbrella repo for the design, and
+# EVENT-PROTOCOL.md §2.3 for the notice class/severity/summary convention.
+
+# The local control-plane relay to subscribe to.
+relay_url = "ws://127.0.0.1:4848"
+
+# Required: this service's own signing/encryption key (hex), distinct from
+# nostrhost-control's server_pubkey/operator_pubkey. A compromised notifier
+# key should carry no control-plane authority — it can only read notices and
+# send DMs.
+notifier_private_key = ""
+
+# state/notifications/*.toml (roadmap §18.6) — recipients and policy rules.
+recipients_path = "./state/notifications/recipients.toml"
+policy_path     = "./state/notifications/policy.toml"
+
+# How often "summary" delivery rules flush their queued notices as a single
+# digest DM.
+digest_interval = "1h"
+
+# Relays used for "local-only" scope delivery, and as the fallback for
+# "external" scope when a recipient hasn't published their own DM relay
+# list. These are relays the recipient's client can actually reach — NOT
+# the loopback control-plane relay above.
+outbound_relays = []
