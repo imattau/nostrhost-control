@@ -30,13 +30,10 @@ type NIP17Sender struct {
 	localRelays []string
 }
 
-// NewNIP17Sender builds a sender from config. pool may be shared with the
-// subscriber (both are plain go-nostr SimplePool clients).
-func NewNIP17Sender(cfg Config, pool *nostr.SimplePool) (*NIP17Sender, error) {
-	kr, err := keyer.NewPlainKeySigner(cfg.NotifierPrivateKey)
-	if err != nil {
-		return nil, fmt.Errorf("notify: notifier key: %w", err)
-	}
+// NewNIP17Sender builds a sender from config. kr is the notifier key (also
+// used by the caller to authenticate its relay subscriptions); pool may be
+// shared with the subscriber (both are plain go-nostr SimplePool clients).
+func NewNIP17Sender(cfg Config, pool *nostr.SimplePool, kr keyer.KeySigner) (*NIP17Sender, error) {
 	if len(cfg.OutboundRelays) == 0 {
 		return nil, fmt.Errorf("notify: outbound_relays must name at least one relay for notification delivery")
 	}

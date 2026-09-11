@@ -218,7 +218,7 @@ func (s *Server) requireAuthPolicy(ctx context.Context, event *nostr.Event) (boo
 	if kindIn(s.protectedKinds(), event.Kind) {
 		if authed := khatru.GetAuthed(ctx); authed == "" {
 			khatru.RequestAuth(ctx)
-			return true, "authentication required"
+			return true, "auth-required: authentication required"
 		}
 	}
 	return false, ""
@@ -238,7 +238,7 @@ func (s *Server) requireAuthForRead(ctx context.Context, filter nostr.Filter) (b
 		if kindIn(s.protectedKinds(), kind) {
 			if authed := khatru.GetAuthed(ctx); authed == "" {
 				khatru.RequestAuth(ctx)
-				return true, "authentication required"
+				return true, "auth-required: authentication required"
 			}
 		}
 	}

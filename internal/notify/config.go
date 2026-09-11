@@ -29,6 +29,10 @@ type Config struct {
 	RecipientsPath string `toml:"recipients_path"`
 	PolicyPath     string `toml:"policy_path"`
 
+	// StatePath is where the service persists its last-seen event cursor
+	// (JSON, 0600), so restarts resume without re-delivering history.
+	StatePath string `toml:"state_path"`
+
 	// DigestInterval is how often DeliverySummary rules flush their queue.
 	DigestInterval string `toml:"digest_interval"`
 
@@ -44,6 +48,7 @@ func Default() Config {
 		RelayURL:       "ws://127.0.0.1:4848",
 		RecipientsPath: "./state/notifications/recipients.toml",
 		PolicyPath:     "./state/notifications/policy.toml",
+		StatePath:      "./state/notifications/state.json",
 		DigestInterval: "1h",
 	}
 }
@@ -78,6 +83,9 @@ func (c *Config) applyDefaults() {
 	}
 	if c.DigestInterval == "" {
 		c.DigestInterval = d.DigestInterval
+	}
+	if c.StatePath == "" {
+		c.StatePath = d.StatePath
 	}
 }
 

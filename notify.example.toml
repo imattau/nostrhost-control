@@ -16,6 +16,11 @@ notifier_private_key = ""
 recipients_path = "./state/notifications/recipients.toml"
 policy_path     = "./state/notifications/policy.toml"
 
+# Last-seen event cursor (JSON, 0600). The service resumes from this on
+# restart so it never re-delivers history; a fresh install starts at "now"
+# rather than replaying years of stored events.
+state_path = "./state/notifications/state.json"
+
 # How often "summary" delivery rules flush their queued notices as a single
 # digest DM.
 digest_interval = "1h"

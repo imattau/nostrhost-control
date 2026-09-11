@@ -3,6 +3,7 @@ package notify
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/imattau/nostrhost-control/internal/eventmodel"
 	"github.com/nbd-wtf/go-nostr"
@@ -55,8 +56,9 @@ func (s *Service) HandleEvent(ctx context.Context, event *nostr.Event) {
 			if !ok {
 				continue
 			}
+			start := time.Now()
 			if err := s.Sender.Send(ctx, pk, FormatImmediate(item), rule.Scope); err != nil {
-				log.Printf("notify: immediate send to %s failed: %v", rule.Recipient, err)
+				log.Printf("notify: immediate send to %s failed after %s: %v", rule.Recipient, time.Since(start), err)
 			}
 		case DeliverySummary:
 			s.Digest.Add(rule.Recipient, item)
