@@ -29,4 +29,8 @@ digest_interval = "1h"
 # "external" scope when a recipient hasn't published their own DM relay
 # list. These are relays the recipient's client can actually reach — NOT
 # the loopback control-plane relay above.
+#
+# Choose NIP-17-friendly relays: they must index kind-1059 gift-wraps by
+# their "p" tag so DM clients can discover them (e.g. nos.lol does;
+# relay.damus.io accepts kind-1059 but does not return them via "#p").
 outbound_relays = []
