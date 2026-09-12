@@ -1,0 +1,21 @@
+[Unit]
+Description=NostrHost notification daemon (NIP-17/59 encrypted DMs)
+After=network-online.target nostrhost-control.service
+Wants=network-online.target
+ConditionPathExists=/etc/nostrhost/notify.toml
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/nostrhost-notify -config /etc/nostrhost/notify.toml
+Restart=on-failure
+RestartSec=5s
+User=root
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/nostrhost/state/notifications
+
+[Install]
+WantedBy=multi-user.target
