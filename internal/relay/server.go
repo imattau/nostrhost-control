@@ -62,7 +62,7 @@ type Server struct {
 
 // New assembles the relay from cfg.
 func New(cfg config.Config) (*Server, error) {
-pol, err := policy.Open(cfg.PolicyDBPath, adminsFrom(cfg), cfg.AllowedKinds, cfg.AllowlistMode)
+	pol, err := policy.Open(cfg.PolicyDBPath, adminsFrom(cfg), cfg.AllowedKinds, cfg.AllowlistMode)
 	if err != nil {
 		return nil, fmt.Errorf("open policy store: %w", err)
 	}
@@ -76,6 +76,12 @@ pol, err := policy.Open(cfg.PolicyDBPath, adminsFrom(cfg), cfg.AllowedKinds, cfg
 	// portal service must not hold operator/root keys.
 	if nostr.IsValidPublicKey(cfg.NoticePubkey) {
 		_ = pol.Allow(cfg.NoticePubkey, "portal")
+	}
+	// The catalogue publisher key signs catalogue declarations (catalog.publish).
+	// Writer-only, never a NIP-86 admin - publishing must not imply control
+	// authority over the node.
+	if nostr.IsValidPublicKey(cfg.PublisherPubkey) {
+		_ = pol.Allow(cfg.PublisherPubkey, "publisher")
 	}
 
 	s := &Server{

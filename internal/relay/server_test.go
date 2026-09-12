@@ -350,3 +350,16 @@ func TestServerPubkeyIsAllowlistedWriterNotAdmin(t *testing.T) {
 		t.Fatal("operator pubkey should be a relay admin")
 	}
 }
+
+func TestPublisherPubkeyIsAllowlistedWriterNotAdmin(t *testing.T) {
+	operator := mustPubkey(t)
+	publisher := "e0d3d44b6d0a2b1b5c6f3d7a5f0c0d1e2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d"
+	srv, _ := startServer(t, operator, func(cfg *config.Config) { cfg.PublisherPubkey = publisher })
+
+	if !srv.Policy.IsAllowed(publisher) {
+		t.Fatal("publisher pubkey should be an allowlisted writer")
+	}
+	if srv.Policy.IsAdmin(publisher) {
+		t.Fatal("publisher pubkey must NOT be a relay admin (NIP-86 authority)")
+	}
+}
