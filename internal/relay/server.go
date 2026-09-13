@@ -83,6 +83,20 @@ func New(cfg config.Config) (*Server, error) {
 	if nostr.IsValidPublicKey(cfg.PublisherPubkey) {
 		_ = pol.Allow(cfg.PublisherPubkey, "publisher")
 	}
+	// Agent identities may publish operation requests, but this writer
+	// allowlist does not grant any operation capabilities. The projector
+	// reconciles only entries sourced from agent_pubkeys; operator-managed
+	// allowlist entries are left untouched.
+	agentPubkeys := make([]string, 0, len(cfg.AgentPubkeys))
+	for _, pubkey := range cfg.AgentPubkeys {
+		if nostr.IsValidPublicKey(pubkey) {
+			agentPubkeys = append(agentPubkeys, pubkey)
+		}
+	}
+	if err := pol.SyncAllowed(agentPubkeys, "agent"); err != nil {
+		_ = pol.Close()
+		return nil, fmt.Errorf("sync configured agent writers: %w", err)
+	}
 
 	s := &Server{
 		Relay:  khatru.NewRelay(),

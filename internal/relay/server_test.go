@@ -363,3 +363,15 @@ func TestPublisherPubkeyIsAllowlistedWriterNotAdmin(t *testing.T) {
 		t.Fatal("publisher pubkey must NOT be a relay admin (NIP-86 authority)")
 	}
 }
+
+func TestConfiguredAgentPubkeyIsAllowlistedWriterNotAdmin(t *testing.T) {
+	_, admin := newKeys(t)
+	_, agent := newKeys(t)
+	srv, _ := startServer(t, admin, func(c *config.Config) { c.AgentPubkeys = []string{agent} })
+	if !srv.Policy.IsAllowed(agent) {
+		t.Fatal("configured agent must be an allowlisted writer")
+	}
+	if srv.Policy.IsAdmin(agent) {
+		t.Fatal("agent writer allowlisting must not grant NIP-86 admin authority")
+	}
+}

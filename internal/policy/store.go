@@ -143,6 +143,48 @@ func (s *Store) Allow(pubkey, reason string) error {
 	})
 }
 
+// SyncAllowed replaces only entries managed under one configuration reason.
+// This lets the relay reconcile configured agent writers without revoking
+// keys explicitly allowed by an operator or other subsystem.
+func (s *Store) SyncAllowed(pubkeys []string, reason string) error {
+	wanted := make(map[string]struct{}, len(pubkeys))
+	for _, pubkey := range pubkeys {
+		if pubkey != "" {
+			wanted[pubkey] = struct{}{}
+		}
+	}
+	return s.db.Update(func(tx *bolt.Tx) error {
+		allowed := tx.Bucket(bucketAllowed)
+		var obsolete [][]byte
+		if err := allowed.ForEach(func(key, value []byte) error {
+			if string(value) != reason {
+				return nil
+			}
+			if _, keep := wanted[string(key)]; keep {
+				return nil
+			}
+			obsolete = append(obsolete, append([]byte(nil), key...))
+			return nil
+		}); err != nil {
+			return err
+		}
+		for _, key := range obsolete {
+			if err := allowed.Delete(key); err != nil {
+				return err
+			}
+		}
+		for pubkey := range wanted {
+			if err := tx.Bucket(bucketBanned).Delete([]byte(pubkey)); err != nil {
+				return err
+			}
+			if err := allowed.Put([]byte(pubkey), []byte(reason)); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 func listKV(db *bolt.DB, bucket []byte) map[string]string {
 	out := map[string]string{}
 	_ = db.View(func(tx *bolt.Tx) error {

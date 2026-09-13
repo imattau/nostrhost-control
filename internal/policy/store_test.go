@@ -41,6 +41,24 @@ func TestAllowBan(t *testing.T) {
 	}
 }
 
+func TestSyncAllowedReconcilesOnlyConfiguredReason(t *testing.T) {
+	s := openTmp(t, nil, nil, false)
+	_ = s.Allow("operator-key", "operator")
+	_ = s.Allow("old-agent", "agent")
+	if err := s.SyncAllowed([]string{"new-agent"}, "agent"); err != nil {
+		t.Fatal(err)
+	}
+	if s.IsAllowed("old-agent") || !s.IsAllowed("new-agent") || !s.IsAllowed("operator-key") {
+		t.Fatal("sync must replace agent entries and preserve other allowlist owners")
+	}
+	if err := s.SyncAllowed(nil, "agent"); err != nil {
+		t.Fatal(err)
+	}
+	if s.IsAllowed("new-agent") || !s.IsAllowed("operator-key") {
+		t.Fatal("empty sync must remove configured agent entries only")
+	}
+}
+
 func TestKindPolicy(t *testing.T) {
 	s := openTmp(t, nil, []int{1, 2200}, false)
 	if !s.KindAllowed(2200) || s.KindAllowed(30078) {

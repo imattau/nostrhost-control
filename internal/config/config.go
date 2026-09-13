@@ -33,6 +33,7 @@ type Config struct {
 	ServerPubkey     string     `toml:"server_pubkey"`
 	NoticePubkey     string     `toml:"notice_pubkey"`
 	PublisherPubkey  string     `toml:"publisher_pubkey"`
+	AgentPubkeys     []string   `toml:"agent_pubkeys"`
 	AdminPubkeys     []string   `toml:"admin_pubkeys"`
 	AllowlistMode    bool       `toml:"allowlist_mode"`
 	RequireAuthKinds []int      `toml:"require_auth_kinds"`
