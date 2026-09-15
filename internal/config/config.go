@@ -3,10 +3,9 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"time"
 
-	"github.com/pelletier/go-toml/v2"
+	"github.com/imattau/nostrhost-control/internal/tomlutil"
 )
 
 // Defaults (bound to loopback only — this is a local control plane).
@@ -58,13 +57,9 @@ func Default() Config {
 
 // Load reads the config file at path and applies defaults for unset fields.
 func Load(path string) (Config, error) {
-	cfg := Default()
-	raw, err := os.ReadFile(path)
+	cfg, err := tomlutil.Load[Config](path, "config")
 	if err != nil {
-		return cfg, fmt.Errorf("config: read %s: %w", path, err)
-	}
-	if err := toml.Unmarshal(raw, &cfg); err != nil {
-		return cfg, fmt.Errorf("config: parse %s: %w", path, err)
+		return Default(), err
 	}
 	cfg.applyDefaults()
 	if err := cfg.Validate(); err != nil {
@@ -99,21 +94,21 @@ func (c *Config) Validate() error {
 	if c.ListenPort < 1 || c.ListenPort > 65535 {
 		return fmt.Errorf("config: listen_port out of range: %d", c.ListenPort)
 	}
-	for _, p := range c.Prunable {
-		if _, err := time.ParseDuration(p.KeepFor); err != nil {
-			return fmt.Errorf("config: prunable kind %d keep_for %q: %w", p.Kind, p.KeepFor, err)
-		}
+	if _, err := c.PruneDurations(); err != nil {
+		return err
 	}
 	return nil
 }
 
-// PruneDurations returns the prunable kinds with parsed durations.
+// PruneDurations parses every Prunable.KeepFor and returns the prunable
+// kinds keyed by parsed duration. Validate calls this too, so a config that
+// has passed Validate is guaranteed to parse cleanly here.
 func (c Config) PruneDurations() (map[int]time.Duration, error) {
-	out := map[int]time.Duration{}
+	out := make(map[int]time.Duration, len(c.Prunable))
 	for _, p := range c.Prunable {
 		d, err := time.ParseDuration(p.KeepFor)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("config: prunable kind %d keep_for %q: %w", p.Kind, p.KeepFor, err)
 		}
 		out[p.Kind] = d
 	}

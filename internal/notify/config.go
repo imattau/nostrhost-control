@@ -2,10 +2,9 @@ package notify
 
 import (
 	"fmt"
-	"os"
 	"time"
 
-	"github.com/pelletier/go-toml/v2"
+	"github.com/imattau/nostrhost-control/internal/tomlutil"
 )
 
 // Config is the nostrhost-notify service configuration. It is a distinct
@@ -55,13 +54,9 @@ func Default() Config {
 
 // LoadConfig reads path and applies defaults for unset fields.
 func LoadConfig(path string) (Config, error) {
-	cfg := Default()
-	raw, err := os.ReadFile(path)
+	cfg, err := tomlutil.Load[Config](path, "notify: config")
 	if err != nil {
-		return cfg, fmt.Errorf("notify: read config %s: %w", path, err)
-	}
-	if err := toml.Unmarshal(raw, &cfg); err != nil {
-		return cfg, fmt.Errorf("notify: parse config %s: %w", path, err)
+		return Default(), err
 	}
 	cfg.applyDefaults()
 	if err := cfg.Validate(); err != nil {

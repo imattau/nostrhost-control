@@ -12,10 +12,9 @@ import (
 	"flag"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
+	"github.com/imattau/nostrhost-control/internal/cmdutil"
 	"github.com/imattau/nostrhost-control/internal/notify"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/keyer"
@@ -56,13 +55,10 @@ func main() {
 	flag.Parse()
 
 	cfg, err := notify.LoadConfig(*cfgPath)
-	if err != nil {
-		log.Fatalf("nostrhost-notify: %v", err)
-	}
+	cmdutil.FatalIfErr("nostrhost-notify", err)
+
 	policy, err := notify.LoadPolicy(cfg.RecipientsPath, cfg.PolicyPath)
-	if err != nil {
-		log.Fatalf("nostrhost-notify: %v", err)
-	}
+	cmdutil.FatalIfErr("nostrhost-notify", err)
 
 	cur, hasState, err := loadCursor(cfg.StatePath)
 	if err != nil {
@@ -79,13 +75,11 @@ func main() {
 	}
 	log.Printf("nostrhost-notify: resuming from last_seen=%d", cur.LastSeen)
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := cmdutil.SignalContext()
 	defer stop()
 
 	kr, err := keyer.NewPlainKeySigner(cfg.NotifierPrivateKey)
-	if err != nil {
-		log.Fatalf("nostrhost-notify: notifier key: %v", err)
-	}
+	cmdutil.FatalIfErr("nostrhost-notify: notifier key", err)
 
 	// The local control-plane relay protects the notice kinds (2210-2213,
 	// and the operation chain) with NIP-42 auth on read (ProtectedKinds).

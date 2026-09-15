@@ -11,10 +11,10 @@ package notify
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/nbd-wtf/go-nostr/nip19"
-	"github.com/pelletier/go-toml/v2"
+
+	"github.com/imattau/nostrhost-control/internal/tomlutil"
 )
 
 // Delivery is how a matched notice reaches its recipient.
@@ -96,27 +96,11 @@ func LoadPolicy(recipientsPath, policyPath string) (Policy, error) {
 }
 
 func readRecipients(path string) (recipientsFile, error) {
-	var rf recipientsFile
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return rf, fmt.Errorf("notify: read recipients %s: %w", path, err)
-	}
-	if err := toml.Unmarshal(raw, &rf); err != nil {
-		return rf, fmt.Errorf("notify: parse recipients %s: %w", path, err)
-	}
-	return rf, nil
+	return tomlutil.Load[recipientsFile](path, "notify: recipients")
 }
 
 func readPolicyRules(path string) (policyFile, error) {
-	var pf policyFile
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return pf, fmt.Errorf("notify: read policy %s: %w", path, err)
-	}
-	if err := toml.Unmarshal(raw, &pf); err != nil {
-		return pf, fmt.Errorf("notify: parse policy %s: %w", path, err)
-	}
-	return pf, nil
+	return tomlutil.Load[policyFile](path, "notify: policy")
 }
 
 func (p *Policy) validate() error {
