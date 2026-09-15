@@ -159,11 +159,16 @@ func New(cfg config.Config) (*Server, error) {
 	// NIP-86 management surface
 	s.wireManagementAPI()
 
-	// retention pruners
-	s.pruners = map[int]time.Duration{}
-	if pd, err := cfg.PruneDurations(); err == nil {
-		s.pruners = pd
+	// retention pruners. cfg.Validate (called by config.Load) already
+	// guarantees every Prunable.KeepFor parses, so this should be
+	// unreachable in practice — but don't silently drop retention config
+	// if it ever isn't.
+	pruners, err := cfg.PruneDurations()
+	if err != nil {
+		_ = pol.Close()
+		return nil, fmt.Errorf("relay: prune durations: %w", err)
 	}
+	s.pruners = pruners
 
 	return s, nil
 }

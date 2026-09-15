@@ -8,6 +8,7 @@ package policy
 import (
 	"fmt"
 	"sort"
+	"strconv"
 
 	"github.com/nbd-wtf/go-nostr/nip86"
 	bolt "go.etcd.io/bbolt"
@@ -196,26 +197,31 @@ func listKV(db *bolt.DB, bucket []byte) map[string]string {
 	return out
 }
 
+// listSorted reads bucket as key/value pairs, converts each pair with build,
+// and returns the results sorted by less. It backs the several ListX methods
+// below that otherwise differ only in output struct type and field names.
+func listSorted[T any](db *bolt.DB, bucket []byte, build func(key, value string) T, less func(a, b T) bool) []T {
+	kv := listKV(db, bucket)
+	out := make([]T, 0, len(kv))
+	for k, v := range kv {
+		out = append(out, build(k, v))
+	}
+	sort.Slice(out, func(i, j int) bool { return less(out[i], out[j]) })
+	return out
+}
+
 // ListBanned returns banned pubkeys with reasons.
 func (s *Store) ListBanned() []nip86.PubKeyReason {
-	kv := listKV(s.db, bucketBanned)
-	out := make([]nip86.PubKeyReason, 0, len(kv))
-	for pk, reason := range kv {
-		out = append(out, nip86.PubKeyReason{PubKey: pk, Reason: reason})
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].PubKey < out[j].PubKey })
-	return out
+	return listSorted(s.db, bucketBanned,
+		func(pk, reason string) nip86.PubKeyReason { return nip86.PubKeyReason{PubKey: pk, Reason: reason} },
+		func(a, b nip86.PubKeyReason) bool { return a.PubKey < b.PubKey })
 }
 
 // ListAllowed returns allowed pubkeys with reasons.
 func (s *Store) ListAllowed() []nip86.PubKeyReason {
-	kv := listKV(s.db, bucketAllowed)
-	out := make([]nip86.PubKeyReason, 0, len(kv))
-	for pk, reason := range kv {
-		out = append(out, nip86.PubKeyReason{PubKey: pk, Reason: reason})
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].PubKey < out[j].PubKey })
-	return out
+	return listSorted(s.db, bucketAllowed,
+		func(pk, reason string) nip86.PubKeyReason { return nip86.PubKeyReason{PubKey: pk, Reason: reason} },
+		func(a, b nip86.PubKeyReason) bool { return a.PubKey < b.PubKey })
 }
 
 // --- kinds ---
@@ -267,13 +273,9 @@ func (s *Store) UnblockIP(ip string) error {
 
 // ListBlockedIPs returns blocked IPs with reasons.
 func (s *Store) ListBlockedIPs() []nip86.IPReason {
-	kv := listKV(s.db, bucketIPs)
-	out := make([]nip86.IPReason, 0, len(kv))
-	for ip, reason := range kv {
-		out = append(out, nip86.IPReason{IP: ip, Reason: reason})
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].IP < out[j].IP })
-	return out
+	return listSorted(s.db, bucketIPs,
+		func(ip, reason string) nip86.IPReason { return nip86.IPReason{IP: ip, Reason: reason} },
+		func(a, b nip86.IPReason) bool { return a.IP < b.IP })
 }
 
 // --- relay info ---
@@ -332,12 +334,11 @@ func (s *Store) listInts(bucket []byte) []int {
 }
 
 func itoa(n int) string {
-	return fmt.Sprintf("%d", n)
+	return strconv.Itoa(n)
 }
 
 func atoi(s string) int {
-	var n int
-	_, err := fmt.Sscanf(s, "%d", &n)
+	n, err := strconv.Atoi(s)
 	if err != nil {
 		return -1
 	}

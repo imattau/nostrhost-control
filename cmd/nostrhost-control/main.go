@@ -7,10 +7,8 @@ import (
 	"context"
 	"flag"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
+	"github.com/imattau/nostrhost-control/internal/cmdutil"
 	"github.com/imattau/nostrhost-control/internal/config"
 	"github.com/imattau/nostrhost-control/internal/relay"
 )
@@ -20,16 +18,12 @@ func main() {
 	flag.Parse()
 
 	cfg, err := config.Load(*cfgPath)
-	if err != nil {
-		log.Fatalf("nostrhost-control: %v", err)
-	}
+	cmdutil.FatalIfErr("nostrhost-control", err)
 
 	srv, err := relay.New(cfg)
-	if err != nil {
-		log.Fatalf("nostrhost-control: %v", err)
-	}
+	cmdutil.FatalIfErr("nostrhost-control", err)
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := cmdutil.SignalContext()
 	defer stop()
 
 	errc := make(chan error, 1)
