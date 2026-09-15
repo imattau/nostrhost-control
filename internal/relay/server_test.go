@@ -19,6 +19,7 @@ import (
 	"github.com/nbd-wtf/go-nostr/nip86"
 
 	"github.com/imattau/nostrhost-control/internal/config"
+	"github.com/imattau/nostrhost-control/internal/eventmodel"
 )
 
 func freePort(t *testing.T) int {
@@ -187,6 +188,92 @@ func TestNIP42AuthRequiredForControlKinds(t *testing.T) {
 	}
 	if !authedOk {
 		t.Fatalf("authenticated publish never succeeded: %v", err)
+	}
+}
+
+func TestCountRespectsNIP42ReadProtection(t *testing.T) {
+	// M7 regression: NIP-45 COUNT must go through the same NIP-42 read gate as
+	// REQ. Without a RejectCountFilter, an unauthenticated client could COUNT
+	// protected kinds even though REQ on them is refused.
+	sk, pk := newKeys(t)
+	srv, addr := startServer(t, pk, nil)
+	if len(srv.Relay.RejectCountFilter) == 0 {
+		t.Fatal("RejectCountFilter is not wired")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+
+	// Unauthenticated client: can write a non-protected kind (kind 1).
+	unauth, err := nostr.RelayConnect(ctx, wsURL(addr))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unauth.Close()
+
+	note := nostr.Event{PubKey: pk, Kind: 1, Content: "hello", CreatedAt: nostr.Now()}
+	signEvent(t, sk, &note)
+	if err := unauth.Publish(ctx, note); err != nil {
+		t.Fatalf("publish kind 1: %v", err)
+	}
+
+	// Authenticated operator: writes a protected kind (2200 request).
+	authed, err := nostr.RelayConnect(ctx, wsURL(addr))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer authed.Close()
+
+	reqEvt := nostr.Event{PubKey: pk, Kind: 2200, Content: `{"tool":"system.status","args":{}}`, CreatedAt: nostr.Now()}
+	signEvent(t, sk, &reqEvt)
+	authedOk := false
+	for attempt := 0; attempt < 3 && !authedOk; attempt++ {
+		err = authed.Publish(ctx, reqEvt)
+		if err == nil {
+			authedOk = true
+			break
+		}
+		if !strings.Contains(err.Error(), "authentication required") {
+			t.Fatalf("unexpected publish error: %v", err)
+		}
+		if aerr := authed.Auth(ctx, func(e *nostr.Event) error { return e.Sign(sk) }); aerr != nil {
+			time.Sleep(20 * time.Millisecond)
+			continue
+		}
+		if err = authed.Publish(ctx, reqEvt); err == nil {
+			authedOk = true
+		}
+	}
+	if !authedOk {
+		t.Fatalf("authenticated publish never succeeded: %v", err)
+	}
+
+	// The stored 2200 event exists: an unauthenticated COUNT of it must come
+	// back 0 (rejected), never the real count — the M7 fix.
+	got, _, err := unauth.Count(ctx, nostr.Filters{{Kinds: []int{2200}}})
+	if err != nil {
+		t.Fatalf("unauth count: %v", err)
+	}
+	if got != 0 {
+		t.Fatalf("unauthenticated COUNT of a protected kind returned %d (should be rejected as 0)", got)
+	}
+
+	// The authenticated operator sees the real count.
+	got2, _, err := authed.Count(ctx, nostr.Filters{{Kinds: []int{2200}}})
+	if err != nil {
+		t.Fatalf("authed count: %v", err)
+	}
+	if got2 != 1 {
+		t.Fatalf("authenticated COUNT of a protected kind returned %d, want 1", got2)
+	}
+
+	// Non-protected kind remains countable unauthenticated.
+	got3, _, err := unauth.Count(ctx, nostr.Filters{{Kinds: []int{1}}})
+	if err != nil {
+		t.Fatalf("count kind 1: %v", err)
+	}
+	if got3 != 1 {
+		t.Fatalf("unauthenticated COUNT of kind 1 returned %d, want 1", got3)
 	}
 }
 
@@ -373,5 +460,93 @@ func TestConfiguredAgentPubkeyIsAllowlistedWriterNotAdmin(t *testing.T) {
 	}
 	if srv.Policy.IsAdmin(agent) {
 		t.Fatal("agent writer allowlisting must not grant NIP-86 admin authority")
+	}
+}
+
+func TestUnauthorizedAuthorPolicy(t *testing.T) {
+	_, operator := newKeys(t)
+	srv, _ := startServer(t, operator, nil)
+	ctx := context.Background()
+	pol := func(kind int, pubkey string) (bool, string) {
+		e := &nostr.Event{PubKey: pubkey, Kind: kind, CreatedAt: nostr.Now()}
+		return srv.rejectUnauthorizedAuthorPolicy(ctx, e)
+	}
+	_, other := newKeys(t)
+
+	// Server-authoritative addressable kinds: admins only.
+	for _, kind := range []int{eventmodel.KindCapability, eventmodel.KindTrustPolicy, eventmodel.KindIdentityDefinition} {
+		if rejected, _ := pol(kind, other); !rejected {
+			t.Fatalf("kind %d by non-admin must be rejected", kind)
+		}
+		if rejected, _ := pol(kind, operator); rejected {
+			t.Fatalf("kind %d by operator must be accepted", kind)
+		}
+	}
+	// Approvals/rejections: admins only.
+	for _, kind := range []int{eventmodel.KindOperationApproval, eventmodel.KindOperationRejection} {
+		if rejected, _ := pol(kind, other); !rejected {
+			t.Fatalf("kind %d by non-admin must be rejected", kind)
+		}
+		if rejected, _ := pol(kind, operator); rejected {
+			t.Fatalf("kind %d by operator must be accepted", kind)
+		}
+	}
+	// Execution kinds: server key or admin.
+	for _, kind := range []int{eventmodel.KindExecutionStarted, eventmodel.KindExecutionResult, KindExecutionProgress} {
+		if rejected, _ := pol(kind, other); !rejected {
+			t.Fatalf("kind %d by a random key must be rejected", kind)
+		}
+		if rejected, _ := pol(kind, operator); rejected {
+			t.Fatalf("kind %d by operator (server key defaults to operator) must be accepted", kind)
+		}
+	}
+}
+
+func TestUnauthorizedAuthorPolicyServerKey(t *testing.T) {
+	_, operator := newKeys(t)
+	_, server := newKeys(t)
+	srv, _ := startServer(t, operator, func(cfg *config.Config) { cfg.ServerPubkey = server })
+	ctx := context.Background()
+	pol := func(kind int, pubkey string) (bool, string) {
+		e := &nostr.Event{PubKey: pubkey, Kind: kind, CreatedAt: nostr.Now()}
+		return srv.rejectUnauthorizedAuthorPolicy(ctx, e)
+	}
+	if rejected, _ := pol(eventmodel.KindExecutionResult, server); rejected {
+		t.Fatal("execution result by the configured server key must be accepted")
+	}
+	if rejected, _ := pol(eventmodel.KindExecutionResult, operator); rejected {
+		t.Fatal("execution result by an admin must be accepted")
+	}
+	_, other := newKeys(t)
+	if rejected, _ := pol(eventmodel.KindExecutionResult, other); !rejected {
+		t.Fatal("execution result by an unrelated key must be rejected")
+	}
+}
+
+func TestNonAdminAllowlistedWriterCannotForgeCapability(t *testing.T) {
+	_, operator := newKeys(t)
+	agentSk, agent := newKeys(t)
+	_, attacker := newKeys(t)
+	_, addr := startServer(t, operator, func(c *config.Config) {
+		c.AllowlistMode = true
+		c.AgentPubkeys = []string{agent}
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	client, err := nostr.RelayConnect(ctx, wsURL(addr))
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer client.Close()
+
+	// The allowlisted agent key (not an admin) tries to forge a capability
+	// grant for the attacker — must be rejected at the relay.
+	evt := nostr.Event{PubKey: agent, Kind: eventmodel.KindCapability, CreatedAt: nostr.Now(),
+		Content: `{"type":"admin","scopes":["app.install","system.upgrade"]}`,
+		Tags:    nostr.Tags{{"d", attacker}}}
+	signEvent(t, agentSk, &evt)
+	if err := client.Publish(ctx, evt); err == nil {
+		t.Fatal("forged capability grant by a non-admin allowlisted key must be rejected")
 	}
 }

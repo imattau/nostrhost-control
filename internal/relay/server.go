@@ -71,6 +71,13 @@ func New(cfg config.Config) (*Server, error) {
 	if nostr.IsValidPublicKey(cfg.ServerPubkey) {
 		_ = pol.Allow(cfg.ServerPubkey, "server")
 	}
+	// The admin set is authoritative from config: keys removed from
+	// operator.toml are revoked (not just never re-granted), so a rotated or
+	// decommissioned key loses its NIP-86 authority on the next restart.
+	if err := pol.SyncAdmins(adminsFrom(cfg)); err != nil {
+		_ = pol.Close()
+		return nil, fmt.Errorf("sync configured admins: %w", err)
+	}
 	// The portal's dedicated notice key writes auth/login notices (2206). Like
 	// the server key it is an allowlisted writer only, never an admin - the
 	// portal service must not hold operator/root keys.
@@ -143,11 +150,20 @@ func New(cfg config.Config) (*Server, error) {
 		s.rejectKindDenied,
 		s.rejectWriterPolicy,
 		s.requireAuthPolicy,
+		s.rejectUnauthorizedAuthorPolicy,
 		s.validateEventModelPolicy,
 	}
 
 	// read policies: protected kinds require NIP-42 auth
 	s.Relay.RejectFilter = []func(context.Context, nostr.Filter) (bool, string){
+		s.requireAuthForRead,
+		policies.NoEmptyFilters,
+		policies.NoComplexFilters,
+	}
+	// M7: COUNT (NIP-45) must go through the same read gate — without a
+	// RejectCountFilter, an unauthenticated client could COUNT protected kinds
+	// even though REQ on them is refused.
+	s.Relay.RejectCountFilter = []func(context.Context, nostr.Filter) (bool, string){
 		s.requireAuthForRead,
 		policies.NoEmptyFilters,
 		policies.NoComplexFilters,
@@ -252,6 +268,43 @@ func (s *Server) requireAuthPolicy(ctx context.Context, event *nostr.Event) (boo
 func (s *Server) validateEventModelPolicy(_ context.Context, event *nostr.Event) (bool, string) {
 	if err := eventmodel.Validate(event); err != nil {
 		return true, err.Error()
+	}
+	return false, ""
+}
+
+// KindExecutionProgress: the executor's live progress notices for an
+// operation (kind 2205). Not a custom/validated kind, but like 2203/2204 it
+// is server-authoritative and must not be forgeable by a local actor.
+const KindExecutionProgress int = 2205
+
+// rejectUnauthorizedAuthorPolicy enforces author authorization for the
+// server-authoritative kinds. The relay's allowlist only gates *who may
+// publish at all*; it does not bind an event to the right author, so a
+// low-trust allowlisted key (agent/notice/publisher) could otherwise forge
+// capability grants, identity mappings, approvals, or execution results.
+//
+//   - capability/trust-policy/identity-definition (31100/31101/31102) and
+//     approval/rejection (2201/2202): admins only.
+//   - execution events (2203/2204/2205): the configured server key (the
+//     executor), or an admin (the server key defaults to the operator key
+//     when `server_sk` is unset in the daemon config).
+func (s *Server) rejectUnauthorizedAuthorPolicy(_ context.Context, event *nostr.Event) (bool, string) {
+	switch event.Kind {
+	case eventmodel.KindCapability,
+		eventmodel.KindTrustPolicy,
+		eventmodel.KindIdentityDefinition,
+		eventmodel.KindOperationApproval,
+		eventmodel.KindOperationRejection:
+		if !s.Policy.IsAdmin(event.PubKey) {
+			return true, "author not authorized for kind"
+		}
+	case eventmodel.KindExecutionStarted, eventmodel.KindExecutionResult, KindExecutionProgress:
+		if s.Cfg.ServerPubkey != "" && event.PubKey == s.Cfg.ServerPubkey {
+			return false, ""
+		}
+		if !s.Policy.IsAdmin(event.PubKey) {
+			return true, "execution events require the server key or an admin"
+		}
 	}
 	return false, ""
 }

@@ -26,6 +26,22 @@ func TestAdminSeeding(t *testing.T) {
 	}
 }
 
+func TestSyncAdminsRevokesRemovedAdmins(t *testing.T) {
+	s := openTmp(t, []string{"aa", "bb"}, nil, false)
+	if err := s.SyncAdmins([]string{"aa", "cc"}); err != nil {
+		t.Fatal(err)
+	}
+	if !s.IsAdmin("aa") || !s.IsAdmin("cc") || s.IsAdmin("bb") {
+		t.Fatal("sync must drop removed admins and add new ones")
+	}
+	if s.IsAllowed("bb") {
+		t.Fatal("removed admin's allow entry must be revoked too")
+	}
+	if !s.IsAllowed("cc") {
+		t.Fatal("new admin must be an allowlisted writer")
+	}
+}
+
 func TestAllowBan(t *testing.T) {
 	s := openTmp(t, nil, nil, false)
 	_ = s.Ban("aa", "spam")

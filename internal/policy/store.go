@@ -88,6 +88,51 @@ func (s *Store) GrantAdmin(pubkey string) error {
 	})
 }
 
+// SyncAdmins replaces the admin set (and their "admin" allow entries) with
+// exactly the configured pubkeys. Removing an admin from operator.toml must
+// revoke their NIP-86 authority; GrantAdmin alone only ever adds, so a
+// decommissioned/rotated key would otherwise retain admin rights in
+// policy.db across restarts.
+func (s *Store) SyncAdmins(pubkeys []string) error {
+	wanted := make(map[string]struct{}, len(pubkeys))
+	for _, pubkey := range pubkeys {
+		if pubkey != "" {
+			wanted[pubkey] = struct{}{}
+		}
+	}
+	return s.db.Update(func(tx *bolt.Tx) error {
+		admins := tx.Bucket(bucketAdmins)
+		allowed := tx.Bucket(bucketAllowed)
+		var obsolete [][]byte
+		if err := admins.ForEach(func(key, value []byte) error {
+			if _, keep := wanted[string(key)]; keep {
+				return nil
+			}
+			obsolete = append(obsolete, append([]byte(nil), key...))
+			return nil
+		}); err != nil {
+			return err
+		}
+		for _, key := range obsolete {
+			if err := admins.Delete(key); err != nil {
+				return err
+			}
+			if err := allowed.Delete(key); err != nil {
+				return err
+			}
+		}
+		for pubkey := range wanted {
+			if err := admins.Put([]byte(pubkey), []byte("granted")); err != nil {
+				return err
+			}
+			if err := allowed.Put([]byte(pubkey), []byte("admin")); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // RevokeAdmin removes an administrator.
 func (s *Store) RevokeAdmin(pubkey string) error {
 	return s.db.Update(func(tx *bolt.Tx) error {

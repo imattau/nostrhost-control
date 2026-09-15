@@ -3,6 +3,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/imattau/nostrhost-control/internal/tomlutil"
@@ -91,6 +92,9 @@ func (c *Config) Validate() error {
 	if c.OperatorPubkey == "" {
 		return fmt.Errorf("config: operator_pubkey is required")
 	}
+	if !isLoopbackHost(c.ListenHost) {
+		return fmt.Errorf("config: listen_host %q is not a loopback address; the control plane must never be exposed on the network", c.ListenHost)
+	}
 	if c.ListenPort < 1 || c.ListenPort > 65535 {
 		return fmt.Errorf("config: listen_port out of range: %d", c.ListenPort)
 	}
@@ -98,6 +102,15 @@ func (c *Config) Validate() error {
 		return err
 	}
 	return nil
+}
+
+// isLoopbackHost reports whether host is a loopback IP or the localhost name.
+func isLoopbackHost(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // PruneDurations parses every Prunable.KeepFor and returns the prunable

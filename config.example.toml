@@ -20,20 +20,25 @@ operator_pubkey = ""
 # Additional administrators (hex pubkeys).
 # admin_pubkeys = ["...", "..."]
 
-# In allowlist mode only explicitly allowed pubkeys may publish.
-allowlist_mode = false
+# In allowlist mode only explicitly allowed pubkeys may publish (admins are
+# auto-allowed; server/notice/publisher/agent keys are allowlisted as writers).
+# ON by default in the example: loopback is not an authorization boundary, and
+# an open relay lets any local process forge capability grants / approvals.
+allowlist_mode = true
 
 # Kinds that require NIP-42 AUTH to write (and read).
 #   absent  -> the control-plane default set is used (control kinds, NIP-78
-#              app data, NIP-51 lists)
-#   []      -> NIP-42 not required (Phase-3 loopback posture: write allowlist
-#              + loopback binding carry access control; nostr-sdk Python
-#              clients can't yet do NIP-42 client auth cleanly)
+#              app data, NIP-51 lists) — RECOMMENDED
+#   []      -> NIP-42 not required (writes are gated only by the allowlist +
+#              the per-author rules below)
 #   [k,...] -> exactly these kinds
-require_auth_kinds = []
+# require_auth_kinds = []
 
 # Optional kind allowlist: when non-empty, only these kinds are stored
 # (anything else is rejected unless later allowed via NIP-86 allowkind).
+# An empty list means "no kind restriction" — the author rules below (see
+# server.go rejectUnauthorizedAuthorPolicy) still gate the server-
+# authoritative kinds regardless of this setting.
 allowed_kinds = []
 denied_kinds  = []
 
