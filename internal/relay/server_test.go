@@ -463,6 +463,25 @@ func TestConfiguredAgentPubkeyIsAllowlistedWriterNotAdmin(t *testing.T) {
 	}
 }
 
+func TestDecisionEventsBypassStaticWriterAllowlist(t *testing.T) {
+	_, operator := newKeys(t)
+	_, secondary := newKeys(t)
+	srv, _ := startServer(t, operator, func(c *config.Config) { c.AllowlistMode = true })
+	ctx := context.Background()
+
+	for _, kind := range []int{eventmodel.KindOperationApproval, eventmodel.KindOperationRejection} {
+		event := &nostr.Event{PubKey: secondary, Kind: kind, CreatedAt: nostr.Now()}
+		if rejected, reason := srv.rejectWriterPolicy(ctx, event); rejected {
+			t.Fatalf("kind %d secondary-admin decision rejected before dynamic auth: %s", kind, reason)
+		}
+	}
+
+	request := &nostr.Event{PubKey: secondary, Kind: eventmodel.KindOperationRequest, CreatedAt: nostr.Now()}
+	if rejected, _ := srv.rejectWriterPolicy(ctx, request); !rejected {
+		t.Fatal("non-decision events must still use the static writer allowlist")
+	}
+}
+
 func TestUnauthorizedAuthorPolicy(t *testing.T) {
 	_, operator := newKeys(t)
 	srv, _ := startServer(t, operator, nil)
@@ -482,10 +501,12 @@ func TestUnauthorizedAuthorPolicy(t *testing.T) {
 			t.Fatalf("kind %d by operator must be accepted", kind)
 		}
 	}
-	// Approvals/rejections: admins only.
+	// Approval/rejection authority is dynamic and enforced by operationsd;
+	// the relay must admit a linked secondary key even though it only knows
+	// the static operator set.
 	for _, kind := range []int{eventmodel.KindOperationApproval, eventmodel.KindOperationRejection} {
-		if rejected, _ := pol(kind, other); !rejected {
-			t.Fatalf("kind %d by non-admin must be rejected", kind)
+		if rejected, _ := pol(kind, other); rejected {
+			t.Fatalf("kind %d must be deferred to operationsd", kind)
 		}
 		if rejected, _ := pol(kind, operator); rejected {
 			t.Fatalf("kind %d by operator must be accepted", kind)

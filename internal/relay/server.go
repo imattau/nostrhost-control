@@ -249,6 +249,16 @@ func (s *Server) rejectWriterPolicy(_ context.Context, event *nostr.Event) (bool
 	if s.Policy.IsBanned(event.PubKey) {
 		return true, "pubkey is banned"
 	}
+	// Approval/rejection authority is resolved by operationsd from the
+	// signer's enabled identity and current YunoHost `admins` membership. The
+	// relay cannot read that native account store, so applying its static
+	// writer allowlist here would discard valid secondary-admin decisions
+	// before the authoritative resolver sees them. This relay is loopback-only;
+	// signatures and event shape are still validated, and operationsd ignores
+	// decisions from non-admin identities.
+	if event.Kind == eventmodel.KindOperationApproval || event.Kind == eventmodel.KindOperationRejection {
+		return false, ""
+	}
 	if s.Policy.AllowlistMode() && !s.Policy.IsAllowed(event.PubKey) {
 		return true, "pubkey not in allowlist"
 	}
@@ -284,7 +294,8 @@ const KindExecutionProgress int = 2205
 // capability grants, identity mappings, approvals, or execution results.
 //
 //   - capability/trust-policy/identity-definition (31100/31101/31102) and
-//     approval/rejection (2201/2202): admins only.
+//   - approval/rejection (2201/2202): deferred to operationsd, whose dynamic
+//     identity resolver can enforce current YunoHost `admins` membership.
 //   - execution events (2203/2204/2205): the configured server key (the
 //     executor), or an admin (the server key defaults to the operator key
 //     when `server_sk` is unset in the daemon config).
@@ -292,9 +303,7 @@ func (s *Server) rejectUnauthorizedAuthorPolicy(_ context.Context, event *nostr.
 	switch event.Kind {
 	case eventmodel.KindCapability,
 		eventmodel.KindTrustPolicy,
-		eventmodel.KindIdentityDefinition,
-		eventmodel.KindOperationApproval,
-		eventmodel.KindOperationRejection:
+		eventmodel.KindIdentityDefinition:
 		if !s.Policy.IsAdmin(event.PubKey) {
 			return true, "author not authorized for kind"
 		}
