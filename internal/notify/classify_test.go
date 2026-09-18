@@ -16,11 +16,23 @@ func TestClassifyOperationRequest(t *testing.T) {
 	if !ok {
 		t.Fatal("expected ok=true for operation request")
 	}
-	if item.Class != "approval" || item.Severity != eventmodel.SeverityWarning {
+	// A bare 2200 is informational: "approval" is only asserted by the
+	// executor's explicit park notice (kind 2210, class approval).
+	if item.Class != "operation" || item.Severity != eventmodel.SeverityInfo {
 		t.Fatalf("unexpected item: %+v", item)
 	}
-	if item.Summary != "approval required: app.upgrade" {
+	if item.Summary != "operation requested: app.upgrade" {
 		t.Fatalf("unexpected summary: %q", item.Summary)
+	}
+}
+
+func TestClassifyApprovalNotice(t *testing.T) {
+	item, ok := Classify(ev(eventmodel.KindSystemEvent, `{"class":"approval","severity":"warning","summary":"approval required: app.upgrade","request_id":"abc"}`))
+	if !ok {
+		t.Fatal("expected ok=true for approval notice")
+	}
+	if item.Class != "approval" || item.Severity != eventmodel.SeverityWarning {
+		t.Fatalf("unexpected item: %+v", item)
 	}
 }
 

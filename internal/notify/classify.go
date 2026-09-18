@@ -60,20 +60,24 @@ func classifyNotice(event *nostr.Event, defaultClass, defaultSeverity string) It
 	return Item{Class: class, Severity: severity, Summary: summary, EventID: event.ID, Kind: event.Kind}
 }
 
-// classifyOperationRequest turns a pending kind-2200 request into an
-// "approval" notice: the notification service does not itself track
-// whether the request was later approved/rejected/executed (that stays the
-// operation chain's job) — it simply surfaces that a request is waiting.
+// classifyOperationRequest surfaces a kind-2200 request as an informational
+// "operation" notice. It is deliberately NOT classified as "approval":
+// whether a request actually parks for approval is a decision only the
+// executor makes (a request by an already-authorized actor auto-executes),
+// and the operation request event itself carries no such marker. The
+// executor publishes an explicit kind-2210 notice with class "approval" when
+// (and only when) it parks a request, and that notice is what the "approval"
+// policy class matches.
 func classifyOperationRequest(event *nostr.Event) Item {
 	var body struct {
 		Tool string `json:"tool"`
 	}
 	_ = json.Unmarshal([]byte(event.Content), &body)
-	summary := "approval required"
+	summary := "operation requested"
 	if body.Tool != "" {
-		summary = fmt.Sprintf("approval required: %s", body.Tool)
+		summary = fmt.Sprintf("operation requested: %s", body.Tool)
 	}
-	return Item{Class: "approval", Severity: eventmodel.SeverityWarning, Summary: summary, EventID: event.ID, Kind: event.Kind}
+	return Item{Class: "operation", Severity: eventmodel.SeverityInfo, Summary: summary, EventID: event.ID, Kind: event.Kind}
 }
 
 // classifyExecutionResult surfaces the outcome of an approved operation.
