@@ -110,7 +110,14 @@ func New(cfg config.Config) (*Server, error) {
 		Policy: pol,
 		Cfg:    cfg,
 	}
-	s.Store = &badger.BadgerBackend{Path: cfg.EventsDBPath, MaxLimit: 500}
+	// MaxLimit is also the ceiling for an explicit REQ `limit`, and the
+	// badger backend derives its *default* limit from it as MaxLimit/4 (see
+	// fiatjaf/eventstore badger QueryEvents). Keep it comfortably above the
+	// full operation chain: a too-small value silently truncates every
+	// unlimited REQ, so chain replays and `list_operations` miss the older
+	// requests/results and report stale states (e.g. APPROVED for an
+	// operation the executor already rejected).
+	s.Store = &badger.BadgerBackend{Path: cfg.EventsDBPath, MaxLimit: 20000}
 
 	s.Relay.ServiceURL = fmt.Sprintf("ws://%s:%d", cfg.ListenHost, cfg.ListenPort)
 	s.Relay.Negentropy = true
