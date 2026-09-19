@@ -1,0 +1,466 @@
+{
+  "schema": 1,
+  "description": "Fold corpus for authority/event-protocol/envelope.md \u00a73-4. Ordering, revision preference, deterministic tie-break and replacement are exercised. Each fixture's expected 'fact' is the effective state for the address after folding the events in the given order.",
+  "fixtures": [
+    {
+      "id": "31100-no-protocol-fields-nip33-order",
+      "validators": [
+        "python"
+      ],
+      "kind": 31100,
+      "events": [
+        {
+          "id": "cap0000000000000000000000000000000000000000000000000000000000010",
+          "kind": 31100,
+          "created_at": 100,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"type\":\"agent\",\"scopes\":[\"app.read\"]}"
+        },
+        {
+          "id": "cap0000000000000000000000000000000000000000000000000000000000020",
+          "kind": 31100,
+          "created_at": 200,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"type\":\"agent\",\"scopes\":[\"app.read\",\"app.install\"]}"
+        }
+      ],
+      "expect": {
+        "subject": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "revision": 0,
+        "enabled": true,
+        "conflicts": 0,
+        "fact": {
+          "type": "agent",
+          "scopes": [
+            "app.read",
+            "app.install"
+          ]
+        }
+      }
+    },
+    {
+      "id": "31100-higher-revision-wins-even-if-older",
+      "validators": [
+        "python"
+      ],
+      "kind": 31100,
+      "events": [
+        {
+          "id": "cap0000000000000000000000000000000000000000000000000000000000030",
+          "kind": 31100,
+          "created_at": 100,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"type\":\"agent\",\"scopes\":[\"app.read\"],\"revision\":2}"
+        },
+        {
+          "id": "cap0000000000000000000000000000000000000000000000000000000000040",
+          "kind": 31100,
+          "created_at": 500,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"type\":\"agent\",\"scopes\":[\"app.read\",\"old\"],\"revision\":1}"
+        }
+      ],
+      "expect": {
+        "subject": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "revision": 2,
+        "enabled": true,
+        "conflicts": 0,
+        "fact": {
+          "type": "agent",
+          "scopes": [
+            "app.read"
+          ]
+        }
+      }
+    },
+    {
+      "id": "31100-equal-revision-tie-break-by-created-at-then-id",
+      "validators": [
+        "python"
+      ],
+      "kind": 31100,
+      "events": [
+        {
+          "id": "cap0000000000000000000000000000000000000000000000000000000000050",
+          "kind": 31100,
+          "created_at": 300,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"type\":\"agent\",\"scopes\":[\"b\"],\"revision\":5}"
+        },
+        {
+          "id": "cap0000000000000000000000000000000000000000000000000000000000060",
+          "kind": 31100,
+          "created_at": 300,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"type\":\"agent\",\"scopes\":[\"a\"],\"revision\":5}"
+        }
+      ],
+      "expect": {
+        "subject": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "revision": 5,
+        "enabled": true,
+        "conflicts": 1,
+        "fact": {
+          "type": "agent",
+          "scopes": [
+            "a"
+          ]
+        }
+      }
+    },
+    {
+      "id": "31100-revocation-empty-scopes-is-effective",
+      "validators": [
+        "python"
+      ],
+      "kind": 31100,
+      "events": [
+        {
+          "id": "cap0000000000000000000000000000000000000000000000000000000000070",
+          "kind": 31100,
+          "created_at": 100,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"type\":\"agent\",\"scopes\":[\"app.read\"],\"revision\":1}"
+        },
+        {
+          "id": "cap0000000000000000000000000000000000000000000000000000000000080",
+          "kind": 31100,
+          "created_at": 200,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"type\":\"agent\",\"scopes\":[],\"revision\":2}"
+        }
+      ],
+      "expect": {
+        "subject": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "revision": 2,
+        "enabled": true,
+        "conflicts": 0,
+        "fact": {
+          "type": "agent",
+          "scopes": []
+        }
+      }
+    },
+    {
+      "id": "31100-duplicate-delivery-idempotent",
+      "validators": [
+        "python"
+      ],
+      "kind": 31100,
+      "events": [
+        {
+          "id": "cap0000000000000000000000000000000000000000000000000000000000090",
+          "kind": 31100,
+          "created_at": 100,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"type\":\"agent\",\"scopes\":[\"app.read\"],\"revision\":4}"
+        },
+        {
+          "id": "cap0000000000000000000000000000000000000000000000000000000000090",
+          "kind": 31100,
+          "created_at": 100,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"type\":\"agent\",\"scopes\":[\"app.read\"],\"revision\":4}"
+        }
+      ],
+      "expect": {
+        "subject": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "revision": 4,
+        "enabled": true,
+        "conflicts": 0,
+        "fact": {
+          "type": "agent",
+          "scopes": [
+            "app.read"
+          ]
+        }
+      }
+    },
+    {
+      "id": "31100-out-of-order-delivery-refolds",
+      "validators": [
+        "python"
+      ],
+      "kind": 31100,
+      "events": [
+        {
+          "id": "cap0000000000000000000000000000000000000000000000000000000000120",
+          "kind": 31100,
+          "created_at": 500,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"type\":\"agent\",\"scopes\":[\"later\"],\"revision\":2}"
+        },
+        {
+          "id": "cap0000000000000000000000000000000000000000000000000000000000110",
+          "kind": 31100,
+          "created_at": 100,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"type\":\"agent\",\"scopes\":[\"earlier\"],\"revision\":1}"
+        }
+      ],
+      "expect": {
+        "subject": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "revision": 2,
+        "enabled": true,
+        "conflicts": 0,
+        "fact": {
+          "type": "agent",
+          "scopes": [
+            "later"
+          ]
+        }
+      }
+    },
+    {
+      "id": "31100-invalid-events-excluded",
+      "validators": [
+        "python"
+      ],
+      "kind": 31100,
+      "events": [
+        {
+          "id": "cap0000000000000000000000000000000000000000000000000000000000130",
+          "kind": 31100,
+          "created_at": 100,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"type\":\"agent\",\"scopes\":[\"good\"],\"revision\":1}"
+        },
+        {
+          "id": "cap0000000000000000000000000000000000000000000000000000000000140",
+          "kind": 31100,
+          "created_at": 900,
+          "tags": [
+            [
+              "d",
+              "bad-subject-d"
+            ]
+          ],
+          "content": "{\"type\":\"agent\",\"scopes\":[\"bad\"],\"revision\":9}"
+        }
+      ],
+      "expect": {
+        "subject": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "revision": 1,
+        "enabled": true,
+        "conflicts": 0,
+        "fact": {
+          "type": "agent",
+          "scopes": [
+            "good"
+          ]
+        }
+      }
+    },
+    {
+      "id": "31102-identity-disable-then-reenable",
+      "validators": [
+        "python"
+      ],
+      "kind": 31102,
+      "events": [
+        {
+          "id": "id00000000000000000000000000000000000000000000000000000000000110",
+          "kind": 31102,
+          "created_at": 100,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"username\":\"alice\",\"signer_type\":\"nip07\",\"enabled\":true}"
+        },
+        {
+          "id": "id0000000000000000000000000000000000000000000000000000000000120",
+          "kind": 31102,
+          "created_at": 200,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"username\":\"\",\"enabled\":false}"
+        },
+        {
+          "id": "id0000000000000000000000000000000000000000000000000000000000130",
+          "kind": 31102,
+          "created_at": 300,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"username\":\"alice\",\"signer_type\":\"nip46\",\"enabled\":true}"
+        }
+      ],
+      "expect": {
+        "subject": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "revision": 0,
+        "enabled": true,
+        "conflicts": 0,
+        "fact": {
+          "username": "alice",
+          "signer_type": "nip46"
+        }
+      }
+    },
+    {
+      "id": "31102-revision-overrides-nip33-time",
+      "validators": [
+        "python"
+      ],
+      "kind": 31102,
+      "events": [
+        {
+          "id": "id0000000000000000000000000000000000000000000000000000000000140",
+          "kind": 31102,
+          "created_at": 100,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"username\":\"alice\",\"enabled\":true,\"revision\":5}"
+        },
+        {
+          "id": "id0000000000000000000000000000000000000000000000000000000000150",
+          "kind": 31102,
+          "created_at": 500,
+          "tags": [
+            [
+              "d",
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            ]
+          ],
+          "content": "{\"username\":\"\",\"enabled\":false,\"revision\":4}"
+        }
+      ],
+      "expect": {
+        "subject": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "revision": 5,
+        "enabled": true,
+        "conflicts": 0,
+        "fact": {
+          "username": "alice",
+          "signer_type": ""
+        }
+      }
+    },
+    {
+      "id": "31101-policy-higher-schema-revision-wins",
+      "validators": [
+        "python"
+      ],
+      "kind": 31101,
+      "events": [
+        {
+          "id": "pol0000000000000000000000000000000000000000000000000000000000110",
+          "kind": 31101,
+          "created_at": 100,
+          "tags": [
+            [
+              "d",
+              "notification-rules"
+            ]
+          ],
+          "content": "{\"schema\":1,\"revision\":1,\"value\":{\"rules\":[\"a\"]}}"
+        },
+        {
+          "id": "pol0000000000000000000000000000000000000000000000000000000000120",
+          "kind": 31101,
+          "created_at": 200,
+          "tags": [
+            [
+              "d",
+              "notification-rules"
+            ]
+          ],
+          "content": "{\"schema\":1,\"revision\":2,\"value\":{\"rules\":[\"a\",\"b\"]}}"
+        }
+      ],
+      "expect": {
+        "subject": "notification-rules",
+        "revision": 2,
+        "enabled": true,
+        "conflicts": 0,
+        "fact": {
+          "schema": 1,
+          "value": {
+            "rules": [
+              "a",
+              "b"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

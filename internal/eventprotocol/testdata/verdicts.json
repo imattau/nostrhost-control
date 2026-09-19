@@ -1,0 +1,919 @@
+{
+  "schema": 1,
+  "description": "Single-event verdict corpus for authority/event-protocol/envelope.md. Each fixture violates exactly one rule. 'validators' lists which implementations must reach the expected verdict.",
+  "fixtures": [
+    {
+      "id": "31100-capability-valid",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "cap0000000000000000000000000000000000000000000000000000000000001",
+        "kind": 31100,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "{\"type\":\"agent\",\"scopes\":[\"app.read\"],\"revision\":1}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": true,
+        "code": ""
+      }
+    },
+    {
+      "id": "31100-legacy-no-envelope",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "cap0000000000000000000000000000000000000000000000000000000000002",
+        "kind": 31100,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "{\"type\":\"agent\",\"scopes\":[]}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": true,
+        "code": ""
+      }
+    },
+    {
+      "id": "31100-missing-d",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "cap0000000000000000000000000000000000000000000000000000000000003",
+        "kind": 31100,
+        "created_at": 1000,
+        "tags": [],
+        "content": "{\"type\":\"agent\",\"scopes\":[]}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "missing-d"
+      }
+    },
+    {
+      "id": "31100-d-not-hex64",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "cap0000000000000000000000000000000000000000000000000000000000004",
+        "kind": 31100,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "not-a-pubkey"
+          ]
+        ],
+        "content": "{\"type\":\"agent\",\"scopes\":[]}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "d-not-hex64"
+      }
+    },
+    {
+      "id": "31100-missing-type",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "cap0000000000000000000000000000000000000000000000000000000000005",
+        "kind": 31100,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "{\"scopes\":[\"app.read\"]}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "31100:missing-type"
+      }
+    },
+    {
+      "id": "31100-scopes-not-array",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "cap0000000000000000000000000000000000000000000000000000000000006",
+        "kind": 31100,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "{\"type\":\"agent\",\"scopes\":\"app.read\"}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "31100:scopes-not-array"
+      }
+    },
+    {
+      "id": "31100-content-not-json",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "cap0000000000000000000000000000000000000000000000000000000000007",
+        "kind": 31100,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "type=agent",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "content-not-json"
+      }
+    },
+    {
+      "id": "31100-subject-mismatch",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "cap0000000000000000000000000000000000000000000000000000000000008",
+        "kind": 31100,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "{\"type\":\"agent\",\"subject\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "subject-mismatch"
+      }
+    },
+    {
+      "id": "31100-revision-invalid",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "cap0000000000000000000000000000000000000000000000000000000000009",
+        "kind": 31100,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "{\"type\":\"agent\",\"revision\":-1}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "revision-invalid"
+      }
+    },
+    {
+      "id": "31101-policy-valid",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "pol0000000000000000000000000000000000000000000000000000000000001",
+        "kind": 31101,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "notification-rules"
+          ]
+        ],
+        "content": "{\"schema\":1,\"revision\":3,\"value\":{\"rules\":[]}}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": true,
+        "code": ""
+      }
+    },
+    {
+      "id": "31101-missing-schema",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "pol0000000000000000000000000000000000000000000000000000000000002",
+        "kind": 31101,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "notification-rules"
+          ]
+        ],
+        "content": "{\"value\":{\"rules\":[]}}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "31101:missing-schema"
+      }
+    },
+    {
+      "id": "31101-missing-d",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "pol0000000000000000000000000000000000000000000000000000000000003",
+        "kind": 31101,
+        "created_at": 1000,
+        "tags": [],
+        "content": "{\"schema\":1}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "missing-d"
+      }
+    },
+    {
+      "id": "31101-schema-invalid",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "pol0000000000000000000000000000000000000000000000000000000000004",
+        "kind": 31101,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "notification-rules"
+          ]
+        ],
+        "content": "{\"schema\":0}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "schema-invalid"
+      }
+    },
+    {
+      "id": "31102-identity-valid",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "id00000000000000000000000000000000000000000000000000000000000001",
+        "kind": 31102,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "{\"username\":\"alice\",\"signer_type\":\"nip07\",\"enabled\":true,\"admin\":false}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": true,
+        "code": ""
+      }
+    },
+    {
+      "id": "31102-revocation-allowed",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "id00000000000000000000000000000000000000000000000000000000000002",
+        "kind": 31102,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "{\"username\":\"\",\"enabled\":false}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": true,
+        "code": ""
+      }
+    },
+    {
+      "id": "31102-missing-username",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "id00000000000000000000000000000000000000000000000000000000000003",
+        "kind": 31102,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "{\"enabled\":true}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "31102:missing-username"
+      }
+    },
+    {
+      "id": "31102-bad-signer-type",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "id00000000000000000000000000000000000000000000000000000000000004",
+        "kind": 31102,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "{\"username\":\"alice\",\"signer_type\":\"hardware\"}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "31102:bad-signer-type"
+      }
+    },
+    {
+      "id": "31102-d-not-hex64",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "id00000000000000000000000000000000000000000000000000000000000005",
+        "kind": 31102,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "alice"
+          ]
+        ],
+        "content": "{\"username\":\"alice\"}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "d-not-hex64"
+      }
+    },
+    {
+      "id": "31102-enabled-not-bool",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "id00000000000000000000000000000000000000000000000000000000000006",
+        "kind": 31102,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "{\"username\":\"alice\",\"enabled\":\"yes\"}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "31102:enabled-not-bool"
+      }
+    },
+    {
+      "id": "31102-admin-not-bool",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "id00000000000000000000000000000000000000000000000000000000000007",
+        "kind": 31102,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "{\"username\":\"alice\",\"admin\":1}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "31102:admin-not-bool"
+      }
+    },
+    {
+      "id": "27236-delegation-valid",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "de11aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "kind": 27236,
+        "created_at": 1000,
+        "tags": [
+          [
+            "p",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "server",
+            "1111111111111111111111111111111111111111111111111111111111111111"
+          ],
+          [
+            "expiry",
+            "2000"
+          ],
+          [
+            "scope",
+            "app.read"
+          ]
+        ],
+        "content": "",
+        "pubkey": "2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "expect": {
+        "accept": true,
+        "code": ""
+      }
+    },
+    {
+      "id": "27236-bad-tags",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "de1000000000000000000000000000000000000000000000000000000000000002",
+        "kind": 27236,
+        "created_at": 1000,
+        "tags": [
+          [
+            "p",
+            "not-hex"
+          ],
+          [
+            "server",
+            "1111111111111111111111111111111111111111111111111111111111111111"
+          ],
+          [
+            "expiry",
+            "2000"
+          ],
+          [
+            "scope",
+            "app.read"
+          ]
+        ],
+        "content": "",
+        "pubkey": "2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "expect": {
+        "accept": false,
+        "code": "27236:bad-tags"
+      }
+    },
+    {
+      "id": "27236-bad-expiry",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "de1000000000000000000000000000000000000000000000000000000000000003",
+        "kind": 27236,
+        "created_at": 1000,
+        "tags": [
+          [
+            "p",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "server",
+            "1111111111111111111111111111111111111111111111111111111111111111"
+          ],
+          [
+            "expiry",
+            "soon"
+          ],
+          [
+            "scope",
+            "app.read"
+          ]
+        ],
+        "content": "",
+        "pubkey": "2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "expect": {
+        "accept": false,
+        "code": "27236:bad-expiry"
+      }
+    },
+    {
+      "id": "27236-missing-scope",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "de1000000000000000000000000000000000000000000000000000000000000004",
+        "kind": 27236,
+        "created_at": 1000,
+        "tags": [
+          [
+            "p",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "server",
+            "1111111111111111111111111111111111111111111111111111111111111111"
+          ],
+          [
+            "expiry",
+            "2000"
+          ]
+        ],
+        "content": "",
+        "pubkey": "2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "expect": {
+        "accept": false,
+        "code": "27236:missing-scope"
+      }
+    },
+    {
+      "id": "27237-revocation-valid",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "rev000000000000000000000000000000000000000000000000000000000000001",
+        "kind": 27237,
+        "created_at": 1000,
+        "tags": [
+          [
+            "e",
+            "de11aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "",
+        "pubkey": "2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "expect": {
+        "accept": true,
+        "code": ""
+      }
+    },
+    {
+      "id": "27237-missing-e",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "rev0000000000000000000000000000000000000000000000000000000000002",
+        "kind": 27237,
+        "created_at": 1000,
+        "tags": [],
+        "content": "",
+        "pubkey": "2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "expect": {
+        "accept": false,
+        "code": "27237:missing-e"
+      }
+    },
+    {
+      "id": "27237-e-not-hex64",
+      "validators": [
+        "python",
+        "go"
+      ],
+      "event": {
+        "id": "rev0000000000000000000000000000000000000000000000000000000000003",
+        "kind": 27237,
+        "created_at": 1000,
+        "tags": [
+          [
+            "e",
+            "short"
+          ]
+        ],
+        "content": "",
+        "pubkey": "2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "expect": {
+        "accept": false,
+        "code": "27237:missing-e"
+      }
+    },
+    {
+      "id": "30000-permission-set-valid",
+      "validators": [
+        "python"
+      ],
+      "event": {
+        "id": "perm000000000000000000000000000000000000000000000000000000000001",
+        "kind": 30000,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "ditto"
+          ],
+          [
+            "p",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ],
+          [
+            "p",
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ]
+        ],
+        "content": "",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": true,
+        "code": ""
+      }
+    },
+    {
+      "id": "30000-missing-d",
+      "validators": [
+        "python"
+      ],
+      "event": {
+        "id": "perm000000000000000000000000000000000000000000000000000000000002",
+        "kind": 30000,
+        "created_at": 1000,
+        "tags": [
+          [
+            "p",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "missing-d"
+      }
+    },
+    {
+      "id": "30000-bad-p",
+      "validators": [
+        "python"
+      ],
+      "event": {
+        "id": "perm000000000000000000000000000000000000000000000000000000000003",
+        "kind": 30000,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "ditto"
+          ],
+          [
+            "p",
+            "nope"
+          ]
+        ],
+        "content": "",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "30000:bad-p"
+      }
+    },
+    {
+      "id": "10000-mute-list-valid",
+      "validators": [
+        "python"
+      ],
+      "event": {
+        "id": "mute000000000000000000000000000000000000000000000000000000000001",
+        "kind": 10000,
+        "created_at": 1000,
+        "tags": [
+          [
+            "p",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          ]
+        ],
+        "content": "",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": true,
+        "code": ""
+      }
+    },
+    {
+      "id": "10000-bad-p",
+      "validators": [
+        "python"
+      ],
+      "event": {
+        "id": "mute000000000000000000000000000000000000000000000000000000000002",
+        "kind": 10000,
+        "created_at": 1000,
+        "tags": [
+          [
+            "p",
+            "not-a-pubkey"
+          ]
+        ],
+        "content": "",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "10000:bad-p"
+      }
+    },
+    {
+      "id": "10002-relay-list-valid",
+      "validators": [
+        "python"
+      ],
+      "event": {
+        "id": "relay00000000000000000000000000000000000000000000000000000000001",
+        "kind": 10002,
+        "created_at": 1000,
+        "tags": [
+          [
+            "r",
+            "wss://relay.example.com"
+          ],
+          [
+            "r",
+            "ws://127.0.0.1:4848"
+          ]
+        ],
+        "content": "",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": true,
+        "code": ""
+      }
+    },
+    {
+      "id": "10002-bad-r",
+      "validators": [
+        "python"
+      ],
+      "event": {
+        "id": "relay00000000000000000000000000000000000000000000000000000000002",
+        "kind": 10002,
+        "created_at": 1000,
+        "tags": [
+          [
+            "r",
+            "https://not-a-relay.example.com"
+          ]
+        ],
+        "content": "",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "10002:bad-r"
+      }
+    },
+    {
+      "id": "10002-no-r",
+      "validators": [
+        "python"
+      ],
+      "event": {
+        "id": "relay00000000000000000000000000000000000000000000000000000000003",
+        "kind": 10002,
+        "created_at": 1000,
+        "tags": [],
+        "content": "",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "10002:bad-r"
+      }
+    },
+    {
+      "id": "30078-app-data-valid",
+      "validators": [
+        "python"
+      ],
+      "event": {
+        "id": "appd000000000000000000000000000000000000000000000000000000000001",
+        "kind": 30078,
+        "created_at": 1000,
+        "tags": [
+          [
+            "d",
+            "nostrhost:portal-settings"
+          ]
+        ],
+        "content": "{\"theme\":\"dark\"}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": true,
+        "code": ""
+      }
+    },
+    {
+      "id": "30078-missing-d",
+      "validators": [
+        "python"
+      ],
+      "event": {
+        "id": "appd000000000000000000000000000000000000000000000000000000000002",
+        "kind": 30078,
+        "created_at": 1000,
+        "tags": [],
+        "content": "{\"theme\":\"dark\"}",
+        "pubkey": "1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      "expect": {
+        "accept": false,
+        "code": "missing-d"
+      }
+    }
+  ]
+}

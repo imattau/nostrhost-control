@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/nbd-wtf/go-nostr"
@@ -153,7 +154,7 @@ func Validate(event *nostr.Event) error {
 	case KindIdentityDefinition:
 		return validateIdentityDefinition(event)
 	case KindTrustPolicy:
-		return validateAddressable(event, "trust policy")
+		return validateTrustPolicy(event)
 	case KindBuildAttestation:
 		return validateAddressable(event, "build attestation")
 	case KindOperationRequest:
@@ -207,11 +208,16 @@ func validateNotice(event *nostr.Event) error {
 func validateDelegation(event *nostr.Event) error {
 	p := event.Tags.Find("p")
 	server := event.Tags.Find("server")
-	if p == nil || len(p) < 2 || server == nil || len(server) < 2 || event.Tags.Find("expiry") == nil {
+	expiry := event.Tags.Find("expiry")
+	if p == nil || len(p) < 2 || server == nil || len(server) < 2 || expiry == nil || len(expiry) < 2 {
 		return kindError(event.Kind, "delegation requires p, server, and expiry tags")
 	}
 	if !validHex64(p[1]) || !validHex64(server[1]) {
 		return kindError(event.Kind, "delegation p and server tags must be 64-hex pubkeys")
+	}
+	expiresAt, err := strconv.ParseInt(expiry[1], 10, 64)
+	if err != nil || expiresAt <= 0 {
+		return kindError(event.Kind, "delegation expiry must be a positive unix timestamp")
 	}
 	if event.Tags.Find("scope") == nil {
 		return kindError(event.Kind, "delegation requires at least one scope tag")
@@ -249,45 +255,143 @@ func validateAddressable(event *nostr.Event, what string) error {
 	return validateJSONContent(event, what)
 }
 
-func validateCapability(event *nostr.Event) error {
-	d := event.Tags.Find("d")
-	if d == nil || len(d) < 2 || !validHex64(d[1]) {
-		return kindError(event.Kind, "capability event 'd' tag must be the subject pubkey (64-hex)")
+// envelope is the shared optional addressable-document header
+// (authority/event-protocol/envelope.md §1). Legacy documents omit it.
+type envelope struct {
+	Schema    *int   `json:"schema"`
+	Revision  *int   `json:"revision"`
+	Subject   string `json:"subject"`
+	UpdatedBy string `json:"updated_by"`
+	Reason    string `json:"reason"`
+}
+
+// validateEnvelope checks the shared envelope fields and, for addressable
+// kinds, that a declared subject mirrors the d tag.
+func validateEnvelope(event *nostr.Event, body []byte, addressable bool) error {
+	if len(body) == 0 {
+		return nil
 	}
-	if err := validateJSONContent(event, "capability"); err != nil {
+	var env envelope
+	if err := json.Unmarshal(body, &env); err != nil {
+		return nil // not an object; the kind validator reports content errors
+	}
+	if env.Schema != nil && *env.Schema < 1 {
+		return kindError(event.Kind, "envelope 'schema' must be an integer >= 1")
+	}
+	if env.Revision != nil && *env.Revision < 0 {
+		return kindError(event.Kind, "envelope 'revision' must be an integer >= 0")
+	}
+	if addressable && env.Subject != "" {
+		d := event.Tags.Find("d")
+		if d == nil || len(d) < 2 || env.Subject != d[1] {
+			return kindError(event.Kind, "envelope 'subject' must mirror the 'd' tag")
+		}
+	}
+	return nil
+}
+
+// validateTrustPolicy enforces the schema-versioned policy document contract:
+// unlike legacy kinds, a trust/policy declaration must carry an envelope
+// `schema` (authority/event-protocol/envelope.md §5).
+func validateTrustPolicy(event *nostr.Event) error {
+	if err := validateAddressable(event, "trust policy"); err != nil {
 		return err
 	}
-	var body struct {
-		Type   string   `json:"type"`
-		Scopes []string `json:"scopes"`
+	if err := validateEnvelope(event, []byte(event.Content), true); err != nil {
+		return err
 	}
+	if event.Content == "" {
+		return kindError(event.Kind, "trust policy must carry an envelope 'schema'")
+	}
+	var env envelope
+	if err := json.Unmarshal([]byte(event.Content), &env); err != nil {
+		return kindError(event.Kind, "trust policy content must be JSON: "+err.Error())
+	}
+	if env.Schema == nil {
+		return kindError(event.Kind, "trust policy must carry an envelope 'schema'")
+	}
+	return nil
+}
+
+func validateCapability(event *nostr.Event) error {
+	d := event.Tags.Find("d")
+	if d == nil || len(d) < 2 {
+		return kindError(event.Kind, "capability event requires a non-empty 'd' tag")
+	}
+	if !validHex64(d[1]) {
+		return kindError(event.Kind, "capability event 'd' tag must be the subject pubkey (64-hex)")
+	}
+	if !json.Valid([]byte(event.Content)) {
+		return kindError(event.Kind, "capability content must be JSON")
+	}
+	if err := validateEnvelope(event, []byte(event.Content), true); err != nil {
+		return err
+	}
+	var body map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(event.Content), &body); err != nil {
-		return kindError(event.Kind, "capability content must be JSON: "+err.Error())
+		return kindError(event.Kind, "capability content must be JSON")
 	}
-	if body.Type == "" {
+	var typeStr string
+	if raw, ok := body["type"]; ok {
+		if err := json.Unmarshal(raw, &typeStr); err != nil {
+			return kindError(event.Kind, "capability content must declare a 'type'")
+		}
+	}
+	if typeStr == "" {
 		return kindError(event.Kind, "capability content must declare a 'type'")
+	}
+	if raw, ok := body["scopes"]; ok {
+		var scopes []string
+		if err := json.Unmarshal(raw, &scopes); err != nil {
+			return kindError(event.Kind, "capability 'scopes' must be an array of strings")
+		}
 	}
 	return nil
 }
 
 func validateIdentityDefinition(event *nostr.Event) error {
 	d := event.Tags.Find("d")
-	if d == nil || len(d) < 2 || !validHex64(d[1]) {
+	if d == nil || len(d) < 2 {
+		return kindError(event.Kind, "identity definition requires a non-empty 'd' tag")
+	}
+	if !validHex64(d[1]) {
 		return kindError(event.Kind, "identity definition 'd' tag must be the subject pubkey (64-hex)")
 	}
-	var body struct {
-		Username   string `json:"username"`
-		SignerType string `json:"signer_type"`
-		Label      string `json:"label"`
-		Enabled    *bool  `json:"enabled"`
+	if !json.Valid([]byte(event.Content)) {
+		return kindError(event.Kind, "identity definition content must be JSON")
 	}
-	if err := json.Unmarshal([]byte(event.Content), &body); err != nil {
-		return kindError(event.Kind, "identity definition content must be JSON: "+err.Error())
+	if err := validateEnvelope(event, []byte(event.Content), true); err != nil {
+		return err
 	}
-	if strings.TrimSpace(body.Username) == "" && (body.Enabled == nil || *body.Enabled) {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(event.Content), &raw); err != nil {
+		return kindError(event.Kind, "identity definition content must be JSON")
+	}
+	var username, signerType string
+	if value, ok := raw["username"]; ok {
+		_ = json.Unmarshal(value, &username)
+	}
+	if value, ok := raw["signer_type"]; ok {
+		if err := json.Unmarshal(value, &signerType); err != nil {
+			return kindError(event.Kind, "identity definition signer_type must be one of nip07|nip46|passkey|unknown")
+		}
+	}
+	enabled := true
+	if value, ok := raw["enabled"]; ok {
+		if err := json.Unmarshal(value, &enabled); err != nil {
+			return kindError(event.Kind, "identity definition 'enabled' must be a boolean")
+		}
+	}
+	if value, ok := raw["admin"]; ok {
+		var admin bool
+		if err := json.Unmarshal(value, &admin); err != nil {
+			return kindError(event.Kind, "identity definition 'admin' must be a boolean")
+		}
+	}
+	if strings.TrimSpace(username) == "" && enabled {
 		return kindError(event.Kind, "identity definition content must declare a non-empty 'username'")
 	}
-	switch body.SignerType {
+	switch signerType {
 	case "", "nip07", "nip46", "passkey", "unknown":
 	default:
 		return kindError(event.Kind, "identity definition signer_type must be one of nip07|nip46|passkey|unknown")
